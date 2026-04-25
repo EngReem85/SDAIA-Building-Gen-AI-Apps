@@ -5,8 +5,8 @@ import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.observability.loop_detector import LoopDetector
-from src.observability.observe import langfuse_context, observe
+from src.observability.detectors import LoopDetector
+from src.observability.observe import langfuse_context, observe, propagate_attributes
 from src.tools.registry import registry
 
 logging.basicConfig(level=logging.INFO)
@@ -83,8 +83,78 @@ def test_observe():
     logger.info("@observe Test Passed!")
 
 
+def test_observe_langfuse_format():
+    logger.info("Testing @observe langfuse format...")
+    
+    from src.observability.observe import _current_span
+
+    captured_span = None
+
+    @observe(name="mock_agent", as_type="agent")
+    def mock_run(query: str):
+        nonlocal captured_span
+        langfuse_context.update_current_observation(
+            input=query,
+            model="gpt-4o",
+        )
+
+        @observe(name="search_tool", as_type="tool")
+        def mock_tool():
+            langfuse_context.update_current_observation(
+                input={"tool": "search", "args": {"q": "test"}},
+                output="Search results"
+            )
+
+
+        mock_tool()
+        mock_tool()
+
+        langfuse_context.update_current_observation(
+            output="Final answer",
+            usage={"input_tokens": 10, "output_tokens": 20, "total_tokens": 30},
+            cost_usd=0.015
+        )
+        captured_span = _current_span.get()
+        return "Final answer"
+
+    result = mock_run("What is AI?")
+    assert result == "Final answer"
+    assert captured_span is not None
+    assert captured_span.name == "mock_agent"
+    assert captured_span.type == "agent"
+    assert captured_span.model == "gpt-4o"
+    assert captured_span.input == "What is AI?"
+    assert captured_span.output == "Final answer"
+    assert captured_span.usage["total_tokens"] == 30
+    assert captured_span.metadata["cost_usd"] == 0.015
+
+    assert len(captured_span.children) == 2
+    child = captured_span.children[0]
+    assert child.name == "search_tool"
+    assert child.type == "tool"
+    assert child.output == "Search results"
+
+    logger.info("@observe langfuse format Test Passed!")
+    
+    # Test propagate_attributes (New v4 Pattern)
+    logger.info("Testing propagate_attributes (v4 Pattern)...")
+    @observe(name="parent")
+    def parent_func():
+        with propagate_attributes(user_id="user_v4", metadata={"v": "4"}):
+            @observe(name="child")
+            def child_func():
+                return _current_span.get()
+            return child_func()
+    
+    child_span = parent_func()
+    assert child_span.metadata["user_id"] == "user_v4"
+    assert child_span.metadata["v"] == "4"
+    logger.info("propagate_attributes Test Passed!")
+
+
 if __name__ == "__main__":
     test_registry()
     test_loop_detector()
     test_observe()
+    test_observe_langfuse_format()
     print("\nAll checks passed!")

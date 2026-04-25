@@ -1,9 +1,9 @@
 """
 BaseAgent: a ReAct agent with decorator-based observability.
 
-Observability uses the same @observe / langfuse_context API as production Langfuse.
+Observability uses the same @observe / propagate_attributes API as production Langfuse.
 Swapping to real Langfuse requires only changing the import:
-    from langfuse.decorators import observe, langfuse_context
+    from langfuse import observe, propagate_attributes
 """
 
 import asyncio
@@ -15,9 +15,8 @@ from pydantic import ValidationError
 
 from src.agent.prompts import DEFAULT_SYSTEM_PROMPT
 from src.config import settings
-from src.observability.loop_detector import LoopDetector
-from src.observability.observe import langfuse_context, observe
-from src.tools.registry import registry
+from src.observability.detectors import LoopDetector
+from src.observability.observe import observe, propagate_attributes
 
 logger = structlog.get_logger()
 
@@ -46,84 +45,40 @@ class BaseAgent:
         self.system_prompt = system_prompt or DEFAULT_SYSTEM_PROMPT
         self.verbose = verbose
 
-        self.tools = registry.get_all_tools() if tools is None else tools
+
+        self.tools = tools or []
         self.tools_schema = [tool.to_openai_schema() for tool in self.tools]
         self.loop_detector = LoopDetector()
 
-    @observe
+
+    @observe(name="agent_run", as_type="agent")
     async def run(self, user_query: str) -> dict:
-        """
-        Execute the ReAct (Reasoning + Acting) loop to answer a user query.
+        with propagate_attributes(metadata={"user_query": user_query}):
+            """
+            Execute the ReAct (Reasoning + Acting) loop to answer a user query.
 
-        The agent iteratively:
-        1. Reasons about the current state/query.
-        2. Decides to call tools or provide a final answer.
-        3. Observes tool outputs and repeats until a solution is found
-           or max_steps is reached.
-        """
-        langfuse_context.update_current_observation(input=user_query)
-        self.loop_detector.reset()
+            TODO: Implement the ReAct loop logic here.
+            1. Initialize message history with the system prompt and user query.
+            2. Use `propagate_attributes` to record the model name and any metadata.
+            3. Loop up to self.max_steps:
+                a. Call the LLM (acompletion) with tools and current messages.
+                b. Track cost/usage from the response.
+                c. If the LLM returns a final answer (no tool calls), return it.
+                d. If there are tool calls:
+                   - Append the assistant message to history.
+                   - Execute the tools using self._execute_tool.
+                   - Append tool results to history.
+            4. Return the final answer and metadata.
+            """
+            # Start your implementation here...
+            raise NotImplementedError("ReAct loop not implemented yet.")
 
-        messages = [
-            {"role": "system", "content": self.system_prompt},
-            {"role": "user", "content": user_query},
-        ]
-        answer = "Agent reached max steps without a final answer."
-        total_cost = 0.0
-        step = 0
-
-        for step in range(1, self.max_steps + 1):
-            call_kwargs: dict = {"model": self.model, "messages": messages}
-            if self.tools_schema:
-                call_kwargs["tools"] = self.tools_schema
-                call_kwargs["tool_choice"] = "auto"
-
-            response = await acompletion(**call_kwargs)
-            message = response.choices[0].message
-
-            try:
-                total_cost += completion_cost(completion_response=response)
-            except Exception as e:
-                logger.debug("cost_tracking_unavailable", error=str(e))
-
-            if not message.tool_calls:
-                answer = message.content or answer
-                break
-
-            # Append assistant turn (with tool calls) to message history
-            assistant_msg: dict = {"role": "assistant", "content": message.content or ""}
-            assistant_msg["tool_calls"] = [
-                {
-                    "id": tc.id,
-                    "type": "function",
-                    "function": {
-                        "name": tc.function.name,
-                        "arguments": tc.function.arguments,
-                    },
-                }
-                for tc in message.tool_calls
-            ]
-            messages.append(assistant_msg)
-
-            tool_results = await asyncio.gather(*[
-                self._execute_tool(tc.function.name, json.loads(tc.function.arguments))
-                for tc in message.tool_calls
-            ])
-            for tc, result in zip(message.tool_calls, tool_results):
-                messages.append({"role": "tool", "tool_call_id": tc.id, "content": result})
-
-        langfuse_context.update_current_observation(
-            output=answer,
-            cost_usd=total_cost,
-        )
-        return {"answer": answer, "metadata": {"total_steps": step}}
-
-    @observe("tool_call")
+    @observe(name="tool_call", as_type="tool")
     async def _execute_tool(self, tool_name: str, arguments: dict) -> str:
         """Registry lookup + loop detection + asyncio.to_thread + error handling."""
-        langfuse_context.update_current_observation(
-            input={"tool": tool_name, "args": arguments}
-        )
+        # NOTE: @observe automatically captures tool_name and arguments as 'input'
+        # and the return value as 'output'. We only use propagate_attributes here 
+        # if we need to pass session_id, user_id, or other context to child spans.
 
         loop_check = self.loop_detector.check_tool_call(tool_name, json.dumps(arguments))
         if loop_check.is_looping:
@@ -134,14 +89,12 @@ class BaseAgent:
                 message=loop_check.message,
             )
             result = f"SYSTEM: {loop_check.message} (Detection: {loop_check.strategy})"
-            langfuse_context.update_current_observation(output=result)
             return result
 
-        tool = registry.get_tool(tool_name)
+        tool = next((t for t in self.tools if t.name == tool_name), None)
         if not tool:
             logger.error("tool_not_found", tool=tool_name)
-            result = f"Error: Tool '{tool_name}' not found."
-            langfuse_context.update_current_observation(output=result)
+            result = f"Error: Tool '{tool_name}' not found on this agent."
             return result
 
         try:
@@ -153,5 +106,4 @@ class BaseAgent:
             logger.error("tool_execution_failed", tool=tool_name, error=str(e))
             result = f"Error: {type(e).__name__}: {e}"
 
-        langfuse_context.update_current_observation(output=result)
         return result

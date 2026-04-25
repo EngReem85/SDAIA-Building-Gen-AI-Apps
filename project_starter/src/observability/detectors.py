@@ -1,4 +1,9 @@
+import statistics
 from dataclasses import dataclass
+from datetime import date
+from threading import Lock
+
+from src.exceptions import TokenBudgetExceeded
 
 @dataclass
 class LoopDetectionResult:
@@ -139,3 +144,62 @@ class LoopDetector:
     def reset(self):
         self.tool_history.clear()
         self.output_history.clear()
+
+
+class CostAnomalyDetector:
+    """
+    Z-score anomaly detector for hourly LLM cost (slides section D).
+
+    Accumulates a rolling window of hourly cost samples and flags when the
+    current sample exceeds `z_threshold` standard deviations from the mean.
+    """
+
+    def __init__(self, window: int = 24, z_threshold: float = 2.5):
+        self.history: list[float] = []
+        self.window = window
+        self.z_threshold = z_threshold
+
+    def check(self, hourly_cost: float) -> bool:
+        if len(self.history) < self.window:
+            self.history.append(hourly_cost)
+            return False
+
+        mean = statistics.mean(self.history[-self.window:])
+        stdev = statistics.stdev(self.history[-self.window:])
+        z_score = (hourly_cost - mean) / (stdev or 1)
+
+        self.history.append(hourly_cost)
+        if abs(z_score) > self.z_threshold:
+            print(f"Anomaly detected! Z-Score: {z_score:.2f}")
+            return True
+        return False
+
+
+class BudgetGuard:
+    """
+    Enforce a daily API spend limit (slides section D).
+
+    Thread-safe: uses a Lock so concurrent agent runs share the same counter.
+    Raises TokenBudgetExceeded if a charge would push the daily total past
+    `daily_limit_usd`. Budget resets at midnight (keyed by ISO date).
+    """
+
+    def __init__(self, daily_limit_usd: float, monthly_limit_usd: float):
+        self.daily_limit = daily_limit_usd
+        self.monthly_limit = monthly_limit_usd  # TODO: enforce monthly limit
+        self._daily_spend: dict[str, float] = {}
+        self._lock = Lock()
+
+    def check_and_charge(self, cost_usd: float) -> bool:
+        """Returns True if spend is allowed, raises TokenBudgetExceeded otherwise."""
+        with self._lock:
+            day_key = date.today().isoformat()
+            day_spend = self._daily_spend.get(day_key, 0.0)
+
+            if day_spend + cost_usd > self.daily_limit:
+                raise TokenBudgetExceeded(
+                    f"Daily budget ${self.daily_limit} reached"
+                )
+
+            self._daily_spend[day_key] = day_spend + cost_usd
+            return True

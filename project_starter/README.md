@@ -18,13 +18,12 @@ project_starter/
     ├── logger.py            # Structured logging (complete)
     ├── main.py              # Typer CLI (TODO: wire OrchestratorAgent)
     ├── agent/
-    │   ├── base.py          # BaseAgent — ReAct loop implemented (complete)
+    │   ├── base.py          # BaseAgent — skeleton (TODO: ReAct loop)
     │   ├── orchestration.py # OrchestratorAgent — entirely TODO (your design)
-    │   └── prompts.py       # System prompts for example roles TODO (your design)
+    │   └── prompts.py       # System prompts — entirely TODO (your design)
     ├── observability/
     │   ├── observe.py       # @observe decorator & langfuse_context stub (complete)
-    │   ├── loop_detector.py # LoopDetector (complete)
-    │   └── cost_tracker.py  # CostTracker (TODO: log_completion, print_cost_breakdown)
+    │   └── loop_detector.py # LoopDetector (complete)
     └── tools/
         ├── registry.py      # ToolRegistry (complete)
         └── search_tool.py   # search_web + read_webpage (complete)
@@ -48,20 +47,14 @@ uv run python tests/verify_components.py
 
 ---
 
-## Student Build Order
+### Step 1 — `src/agent/base.py` → `BaseAgent.run()`
+Implement the ReAct loop. You are provided with the observability logic (`@observe`), a `LoopDetector`, and a tool execution helper (`_execute_tool`). You must build the core loop that handles the conversation history and tool-calling logic.
 
-Work through the remaining TODOs to complete the system.
+### Step 2 — `src/agent/prompts.py`
+Perform prompt engineering to define the roles and standards for your specialized agents (Researcher, Analyst, Writer, etc.).
 
-### Step 1 — `src/observability/cost_tracker.py`
-Implement `log_completion()` and `print_cost_breakdown()`. The foundation uses LiteLLM, so your cost tracker should extract usage from the standard response objects.
-
-**Teaches**: token extraction, usage monitoring, cost calculation.
-**Verify**: `uv run python tests/verify_components.py` passes all checks.
-
----
-
-### Step 2 — `src/agent/orchestration.py` → `OrchestratorAgent`
-Design and implement your own multi-agent pipeline. You have a working `BaseAgent` that handles reasoning and tool execution; now you must decide how to coordinate them.
+### Step 3 — `src/agent/orchestration.py` → `OrchestratorAgent`
+Design and implement your own multi-agent pipeline. You will instantiate multiple `BaseAgent` objects with different prompts and tools, then coordinate them.
 
 | Strategy | Description |
 |---|---|
@@ -89,11 +82,3 @@ uv pip install -e .                   # install dependencies
 uv run python tests/verify_components.py # verify components
 uv run python -m src.main "..."       # run query
 ```
-
-Available prompts in `src/agent/prompts.py`:
-- `DEFAULT_SYSTEM_PROMPT`
-- `RESEARCHER_PROMPT`
-- `ANALYST_PROMPT`
-- `WRITER_PROMPT`
-- `FACT_CHECKER_PROMPT`
-- `PLANNER_PROMPT`

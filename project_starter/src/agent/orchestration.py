@@ -44,12 +44,16 @@ class OrchestratorAgent:
         # Example — a simple researcher:
         #
         #   resolved_model = model or settings.model_name
+        #   from src.tools.registry import registry
+        #
+        #   research_tools = registry.get_tools_by_category("research")
         #
         #   self.researcher = BaseAgent(
         #       model=resolved_model,
         #       max_steps=max_steps,
         #       agent_name="Researcher",
         #       system_prompt=RESEARCHER_PROMPT,
+        #       tools=research_tools,
         #   )
         # You can add as many agents as you like.
         pass
