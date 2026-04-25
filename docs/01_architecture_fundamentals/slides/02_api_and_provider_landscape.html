@@ -9,7 +9,7 @@
 <link href="02_api_and_provider_landscape_files/libs/quarto-html/quarto-syntax-highlighting-587c61ba64f3a5504c4d52d930310e48.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
   <meta name="generator" content="quarto-1.8.26">
 
-  <meta name="dcterms.date" content="2026-04-21">
+  <meta name="dcterms.date" content="2026-04-24">
   <title>API &amp; Provider Landscape</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -204,7 +204,7 @@
 <div class="quarto-title-authors">
 </div>
 
-  <p class="date">2026-04-21</p>
+  <p class="date">2026-04-24</p>
 </section>
 <section>
 <section id="a.-the-provider-landscape" class="title-slide slide level1 sdaia-dark center" data-background-gradient="linear-gradient(135deg, #1C355E, #00C9A7)">
@@ -216,7 +216,7 @@
 <ul>
 <li><strong>A. Provider Landscape</strong> — Proprietary vs Open-Source vs Self-Hosted</li>
 <li><strong>B. API Anatomy</strong> — How HTTP calls to LLMs work with LiteLLM</li>
-<li><strong>C. Context Windows</strong> — Cost vs.&nbsp;Performance trade-offs</li>
+<li><strong>C. Performance &amp; Context</strong> — TTFT metrics and API cost trade-offs</li>
 <li><strong>D. Security</strong> — Protecting your API keys</li>
 <li><strong>E. Wrap-up</strong> — Key takeaways</li>
 </ul>
@@ -543,9 +543,74 @@
 </table>
 </section></section>
 <section>
-<section id="c.-the-context-window" class="title-slide slide level1 sdaia-dark center" data-background-gradient="linear-gradient(135deg, #1C355E, #00C9A7)">
-<h1>C. The Context Window</h1>
-<p>Intelligence has a memory limit</p>
+<section id="c.-performance-context-windows" class="title-slide slide level1 sdaia-dark center" data-background-gradient="linear-gradient(135deg, #1C355E, #00C9A7)">
+<h1>C. Performance &amp; Context Windows</h1>
+<p>Intelligence has a memory limit, and performance has a cost.</p>
+</section>
+<section id="the-performance-trinity" class="slide level2">
+<h2>The Performance Trinity</h2>
+<p>Latency, throughput, and cost — you can’t optimize what you don’t measure.</p>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>Metric</th>
+<th>Definition</th>
+<th>Target</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>TTFT</strong></td>
+<td>Time to first token — first byte user sees</td>
+<td>&lt; 500 ms</td>
+</tr>
+<tr class="even">
+<td><strong>TPS</strong></td>
+<td>Tokens per second — generation speed</td>
+<td>&gt; 30 tok/s</td>
+</tr>
+<tr class="odd">
+<td><strong>E2E Latency</strong></td>
+<td>Total time: request → complete response</td>
+<td>&lt; 5 s</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="why-ttft-matters-most" class="slide level2 smaller">
+<h2>Why TTFT Matters Most</h2>
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>User Perception</strong></p>
+</div>
+<div class="callout-content">
+<p>Research shows users perceive streaming responses starting at 200 ms as “instant,” while a 2-second blank screen feels broken — even if total content arrives at the same time.</p>
+</div>
+</div>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href=""></a><span class="co"># Measuring TTFT with streaming</span></span>
+<span id="cb2-2"><a href=""></a><span class="im">import</span> time</span>
+<span id="cb2-3"><a href=""></a><span class="im">from</span> litellm <span class="im">import</span> completion</span>
+<span id="cb2-4"><a href=""></a></span>
+<span id="cb2-5"><a href=""></a>start <span class="op">=</span> time.time()</span>
+<span id="cb2-6"><a href=""></a>first_token_time <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb2-7"><a href=""></a></span>
+<span id="cb2-8"><a href=""></a>response <span class="op">=</span> completion(</span>
+<span id="cb2-9"><a href=""></a>    model<span class="op">=</span><span class="st">"openrouter/meta-llama/llama-3-8b-instruct:free"</span>,</span>
+<span id="cb2-10"><a href=""></a>    messages<span class="op">=</span>[{<span class="st">"role"</span>: <span class="st">"user"</span>, <span class="st">"content"</span>: <span class="st">"Tell me a story."</span>}],</span>
+<span id="cb2-11"><a href=""></a>    stream<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb2-12"><a href=""></a>)</span>
+<span id="cb2-13"><a href=""></a></span>
+<span id="cb2-14"><a href=""></a><span class="cf">for</span> chunk <span class="kw">in</span> response:</span>
+<span id="cb2-15"><a href=""></a>    <span class="cf">if</span> chunk.choices[<span class="dv">0</span>].delta.content:</span>
+<span id="cb2-16"><a href=""></a>        <span class="cf">if</span> first_token_time <span class="kw">is</span> <span class="va">None</span>:</span>
+<span id="cb2-17"><a href=""></a>            first_token_time <span class="op">=</span> time.time()</span>
+<span id="cb2-18"><a href=""></a>            ttft_ms <span class="op">=</span> (first_token_time <span class="op">-</span> start) <span class="op">*</span> <span class="dv">1000</span></span>
+<span id="cb2-19"><a href=""></a>            <span class="bu">print</span>(<span class="ss">f"TTFT: </span><span class="sc">{</span>ttft_ms<span class="sc">:.0f}</span><span class="ss"> ms"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="context-windows-your-api-bill" class="slide level2">
 <h2>Context Windows &amp; Your API Bill</h2>
@@ -647,37 +712,37 @@
 </div>
 </div>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href=""></a><span class="co"># ❌ DO NOT this</span></span>
-<span id="cb2-2"><a href=""></a>response <span class="op">=</span> completion(model<span class="op">=</span><span class="st">"..."</span>, api_key<span class="op">=</span><span class="st">"sk-or-v1-abc123realtoken"</span>)</span>
-<span id="cb2-3"><a href=""></a></span>
-<span id="cb2-4"><a href=""></a><span class="co"># ✅ DO this</span></span>
-<span id="cb2-5"><a href=""></a><span class="im">import</span> os</span>
-<span id="cb2-6"><a href=""></a><span class="im">from</span> dotenv <span class="im">import</span> load_dotenv</span>
-<span id="cb2-7"><a href=""></a>load_dotenv()</span>
-<span id="cb2-8"><a href=""></a></span>
-<span id="cb2-9"><a href=""></a><span class="co"># LiteLLM automatically reads OPENROUTER_API_KEY from environment</span></span>
-<span id="cb2-10"><a href=""></a>response <span class="op">=</span> completion(model<span class="op">=</span><span class="st">"openrouter/meta-llama/llama-3-8b-instruct:free"</span>,</span>
-<span id="cb2-11"><a href=""></a>                      messages<span class="op">=</span>[{<span class="st">"role"</span>: <span class="st">"user"</span>, <span class="st">"content"</span>: <span class="st">"Hello"</span>}])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href=""></a><span class="co"># ❌ DO NOT this</span></span>
+<span id="cb3-2"><a href=""></a>response <span class="op">=</span> completion(model<span class="op">=</span><span class="st">"..."</span>, api_key<span class="op">=</span><span class="st">"sk-or-v1-abc123realtoken"</span>)</span>
+<span id="cb3-3"><a href=""></a></span>
+<span id="cb3-4"><a href=""></a><span class="co"># ✅ DO this</span></span>
+<span id="cb3-5"><a href=""></a><span class="im">import</span> os</span>
+<span id="cb3-6"><a href=""></a><span class="im">from</span> dotenv <span class="im">import</span> load_dotenv</span>
+<span id="cb3-7"><a href=""></a>load_dotenv()</span>
+<span id="cb3-8"><a href=""></a></span>
+<span id="cb3-9"><a href=""></a><span class="co"># LiteLLM automatically reads OPENROUTER_API_KEY from environment</span></span>
+<span id="cb3-10"><a href=""></a>response <span class="op">=</span> completion(model<span class="op">=</span><span class="st">"openrouter/meta-llama/llama-3-8b-instruct:free"</span>,</span>
+<span id="cb3-11"><a href=""></a>                      messages<span class="op">=</span>[{<span class="st">"role"</span>: <span class="st">"user"</span>, <span class="st">"content"</span>: <span class="st">"Hello"</span>}])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="the-.env-approach-development" class="slide level2 smaller">
 <h2>The <code>.env</code> Approach (Development)</h2>
 <p><strong>Step 1</strong>: Create a <code>.env</code> file in your project root</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode numberSource bash number-lines code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href=""></a><span class="co"># .env</span></span>
-<span id="cb3-2"><a href=""></a><span class="va">OPENROUTER_API_KEY</span><span class="op">=</span>sk-or-v1-your_token_here</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode numberSource bash number-lines code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href=""></a><span class="co"># .env</span></span>
+<span id="cb4-2"><a href=""></a><span class="va">OPENROUTER_API_KEY</span><span class="op">=</span>sk-or-v1-your_token_here</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p><strong>Step 2</strong>: Load it securely in Python</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href=""></a><span class="im">import</span> os</span>
-<span id="cb4-2"><a href=""></a><span class="im">from</span> dotenv <span class="im">import</span> load_dotenv</span>
-<span id="cb4-3"><a href=""></a></span>
-<span id="cb4-4"><a href=""></a>load_dotenv()</span>
-<span id="cb4-5"><a href=""></a></span>
-<span id="cb4-6"><a href=""></a><span class="kw">def</span> validate_environment():</span>
-<span id="cb4-7"><a href=""></a>    <span class="co">"""Ensure required API keys are present."""</span></span>
-<span id="cb4-8"><a href=""></a>    token <span class="op">=</span> os.getenv(<span class="st">"OPENROUTER_API_KEY"</span>)</span>
-<span id="cb4-9"><a href=""></a>    <span class="cf">if</span> <span class="kw">not</span> token:</span>
-<span id="cb4-10"><a href=""></a>        <span class="cf">raise</span> <span class="pp">EnvironmentError</span>(</span>
-<span id="cb4-11"><a href=""></a>            <span class="st">"OPENROUTER_API_KEY not found. "</span></span>
-<span id="cb4-12"><a href=""></a>            <span class="st">"Create a .env file or set the environment variable."</span></span>
-<span id="cb4-13"><a href=""></a>        )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href=""></a><span class="im">import</span> os</span>
+<span id="cb5-2"><a href=""></a><span class="im">from</span> dotenv <span class="im">import</span> load_dotenv</span>
+<span id="cb5-3"><a href=""></a></span>
+<span id="cb5-4"><a href=""></a>load_dotenv()</span>
+<span id="cb5-5"><a href=""></a></span>
+<span id="cb5-6"><a href=""></a><span class="kw">def</span> validate_environment():</span>
+<span id="cb5-7"><a href=""></a>    <span class="co">"""Ensure required API keys are present."""</span></span>
+<span id="cb5-8"><a href=""></a>    token <span class="op">=</span> os.getenv(<span class="st">"OPENROUTER_API_KEY"</span>)</span>
+<span id="cb5-9"><a href=""></a>    <span class="cf">if</span> <span class="kw">not</span> token:</span>
+<span id="cb5-10"><a href=""></a>        <span class="cf">raise</span> <span class="pp">EnvironmentError</span>(</span>
+<span id="cb5-11"><a href=""></a>            <span class="st">"OPENROUTER_API_KEY not found. "</span></span>
+<span id="cb5-12"><a href=""></a>            <span class="st">"Create a .env file or set the environment variable."</span></span>
+<span id="cb5-13"><a href=""></a>        )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="critical-.gitignore" class="slide level2">
 <h2>Critical: <code>.gitignore</code></h2>
@@ -694,10 +759,10 @@
 </div>
 </div>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode numberSource bash number-lines code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href=""></a><span class="co"># .gitignore</span></span>
-<span id="cb5-2"><a href=""></a><span class="ex">.env</span></span>
-<span id="cb5-3"><a href=""></a><span class="ex">.env.local</span></span>
-<span id="cb5-4"><a href=""></a><span class="ex">*.env</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode numberSource bash number-lines code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href=""></a><span class="co"># .gitignore</span></span>
+<span id="cb6-2"><a href=""></a><span class="ex">.env</span></span>
+<span id="cb6-3"><a href=""></a><span class="ex">.env.local</span></span>
+<span id="cb6-4"><a href=""></a><span class="ex">*.env</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p><strong>Production secrets management:</strong></p>
 <table class="caption-top">
 <thead>
@@ -724,14 +789,14 @@
 </section>
 <section id="system-environment-variables-cicd" class="slide level2">
 <h2>System Environment Variables (CI/CD)</h2>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode numberSource bash number-lines code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href=""></a><span class="co"># Linux / macOS</span></span>
-<span id="cb6-2"><a href=""></a><span class="bu">export</span> <span class="va">OPENROUTER_API_KEY</span><span class="op">=</span>sk-or-v1-your_token_here</span>
-<span id="cb6-3"><a href=""></a></span>
-<span id="cb6-4"><a href=""></a><span class="co"># Windows PowerShell</span></span>
-<span id="cb6-5"><a href=""></a><span class="va">$env</span><span class="ex">:OPENROUTER_API_KEY</span> = <span class="st">"sk-or-v1-your_token_here"</span></span>
-<span id="cb6-6"><a href=""></a></span>
-<span id="cb6-7"><a href=""></a><span class="co"># Windows CMD</span></span>
-<span id="cb6-8"><a href=""></a><span class="bu">set</span> OPENROUTER_API_KEY=sk-or-v1-your_token_here</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode numberSource bash number-lines code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href=""></a><span class="co"># Linux / macOS</span></span>
+<span id="cb7-2"><a href=""></a><span class="bu">export</span> <span class="va">OPENROUTER_API_KEY</span><span class="op">=</span>sk-or-v1-your_token_here</span>
+<span id="cb7-3"><a href=""></a></span>
+<span id="cb7-4"><a href=""></a><span class="co"># Windows PowerShell</span></span>
+<span id="cb7-5"><a href=""></a><span class="va">$env</span><span class="ex">:OPENROUTER_API_KEY</span> = <span class="st">"sk-or-v1-your_token_here"</span></span>
+<span id="cb7-6"><a href=""></a></span>
+<span id="cb7-7"><a href=""></a><span class="co"># Windows CMD</span></span>
+<span id="cb7-8"><a href=""></a><span class="bu">set</span> OPENROUTER_API_KEY=sk-or-v1-your_token_here</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="callout callout-tip callout-titled callout-style-default">
 <div class="callout-body">
 <div class="callout-title">
@@ -751,7 +816,7 @@
 <h1>E. Wrap-up</h1>
 
 </section>
-<section id="key-takeaways" class="slide level2 sdaia-dark" data-background-color="#1C355E">
+<section id="key-takeaways" class="slide level2 sdaia-dark smaller" data-background-color="#1C355E">
 <h2>Key Takeaways</h2>
 <ol type="1">
 <li><strong>Three access strategies</strong>: proprietary APIs, inference providers (like OpenRouter), and self-hosted/local — choose based on cost, quality, latency, and privacy.</li>
@@ -771,7 +836,7 @@
 <p><strong>Up Next</strong></p>
 </div>
 <div class="callout-content">
-<p><strong>Lab 2</strong>: Build a production-grade LiteLLM client — from “hello world” to retry logic and caching.</p>
+<p><strong>Lab 2</strong>: Build a production-grade LiteLLM client — from “hello world” to TTFT measurement.</p>
 </div>
 </div>
 </div>

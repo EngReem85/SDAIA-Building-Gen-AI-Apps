@@ -9,7 +9,7 @@
 <link href="06_optimization_production_architecture_files/libs/quarto-html/quarto-syntax-highlighting-587c61ba64f3a5504c4d52d930310e48.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
   <meta name="generator" content="quarto-1.8.26">
 
-  <meta name="dcterms.date" content="2026-04-21">
+  <meta name="dcterms.date" content="2026-04-24">
   <title>Production Optimization</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -204,7 +204,7 @@
 <div class="quarto-title-authors">
 </div>
 
-  <p class="date">2026-04-21</p>
+  <p class="date">2026-04-24</p>
 </section>
 <section>
 <section id="a.-prototype-to-production" class="title-slide slide level1 sdaia-dark center" data-background-gradient="linear-gradient(135deg, #1C355E, #00C9A7)">
@@ -217,9 +217,10 @@
 <li><strong>A. Prototype to Production</strong> — The three optimization axes</li>
 <li><strong>B. HNSW Benchmarking</strong> — Systematic parameter tuning</li>
 <li><strong>C. Quantization</strong> — Trading precision for massive scale</li>
-<li><strong>D. Zero-Downtime Reindexing</strong> — Production update strategies</li>
-<li><strong>E. Cost Planning</strong> — Budgeting for vector infrastructure</li>
-<li><strong>F. Final Architecture</strong> — The complete Research Assistant</li>
+<li><strong>D. Caching Strategies</strong> — Semantic and Response caching</li>
+<li><strong>E. Zero-Downtime Reindexing</strong> — Production update strategies</li>
+<li><strong>F. Cost Planning</strong> — Budgeting for vector infrastructure</li>
+<li><strong>G. Final Architecture</strong> — The complete Research Assistant</li>
 </ul>
 </section>
 <section id="the-scale-question" class="slide level2">
@@ -348,13 +349,18 @@
 </section>
 <section id="search-time-vs-recall" class="slide level2">
 <h2>Search Time vs Recall</h2>
-
-<img data-src="../assets/generated/plot_hnsw_search_vs_recall.png" class="r-stretch"><p>Each point is a parameter configuration. The <strong>Pareto frontier</strong> shows optimal speed-accuracy trade-offs.</p>
-</section>
-<section id="build-time-vs-memory" class="slide level2">
-<h2>Build Time vs Memory</h2>
-
-<img data-src="../assets/generated/plot_hnsw_build_vs_memory.png" class="r-stretch"><p>Bubble size represents <code>M</code> — higher connectivity means more memory but better recall.</p>
+<div class="columns">
+<div class="column" style="width:50%;">
+<p><img data-src="../assets/internet_images/recall_vs_latency_osc.png"></p>
+<blockquote>
+<p>SOURCE: <a href="https://opensourceconnections.com/blog/2025/02/27/vector-search-navigating-recall-and-performance/">OpenSource Connections (2025)</a>. The Pareto frontier shows the optimal speed-accuracy trade-offs for HNSW.</p>
+</blockquote>
+</div><div class="column" style="width:50%;">
+<p><img data-src="../assets/internet_images/osc_1.png"></p>
+<blockquote>
+<p>SOURCE: <a href="https://opensourceconnections.com/blog/2025/02/27/vector-search-navigating-recall-and-performance/">OpenSource Connections (2025)</a>. Diagnostic visualization showing “missing documents” (red dots) at different search depths (k or ef_search), proving how recall improves as search depth increases.</p>
+</blockquote>
+</div></div>
 </section>
 <section id="starting-points" class="slide level2">
 <h2>Starting Points</h2>
@@ -476,7 +482,7 @@
 <span id="cb2-12"><a href=""></a><span class="co"># 4. IVF + Product Quantization (IVFPQ)</span></span>
 <span id="cb2-13"><a href=""></a>quantizer <span class="op">=</span> faiss.IndexFlatL2(d)</span>
 <span id="cb2-14"><a href=""></a>index_ivfpq <span class="op">=</span> faiss.IndexIVFPQ(</span>
-<span id="cb2-15"><a href=""></a>    quantizer, d, nlist<span class="op">=</span><span class="dv">100</span>, m<span class="op">=</span><span class="dv">8</span>, nbits<span class="op">=</span><span class="dv">8</span>)</span>
+<span id="cb2-15"><a href=""></a>    quantizer, d, nlist<span class="op">=</span><span class="dv">1024</span>, m<span class="op">=</span><span class="dv">96</span>, nbits<span class="op">=</span><span class="dv">8</span>)</span>
 <span id="cb2-16"><a href=""></a>index_ivfpq.train(embeddings)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="speed-accuracy-memory" class="slide level2">
@@ -531,8 +537,142 @@
 </div>
 </section></section>
 <section>
-<section id="d.-zero-downtime-reindexing" class="title-slide slide level1 sdaia-dark center" data-background-gradient="linear-gradient(135deg, #1C355E, #00C9A7)">
-<h1>D. Zero-Downtime Reindexing</h1>
+<section id="d.-caching-strategies" class="title-slide slide level1 sdaia-dark center" data-background-gradient="linear-gradient(135deg, #1C355E, #00C9A7)">
+<h1>D. Caching Strategies</h1>
+<p>Embedding-based similarity matching to skip redundant LLM calls</p>
+</section>
+<section id="response-caching" class="slide level2">
+<h2>Response Caching</h2>
+<p>During development and production, you often see the exact same queries repeated.</p>
+<p>LiteLLM ships with built-in exact-match caching — one line to enable it globally:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href=""></a><span class="im">import</span> litellm</span>
+<span id="cb3-2"><a href=""></a></span>
+<span id="cb3-3"><a href=""></a><span class="co"># Enable in-memory caching for all subsequent completion() calls</span></span>
+<span id="cb3-4"><a href=""></a>litellm.enable_cache(<span class="bu">type</span><span class="op">=</span><span class="st">"local"</span>)</span>
+<span id="cb3-5"><a href=""></a></span>
+<span id="cb3-6"><a href=""></a><span class="co"># Or use Redis in production</span></span>
+<span id="cb3-7"><a href=""></a><span class="co"># litellm.enable_cache(type="redis", host="localhost", port=6379)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>Limitation:</strong> Exact match fails if the user adds a single space or changes capitalization.</p>
+</section>
+<section id="what-is-semantic-caching" class="slide level2">
+<h2>What is Semantic Caching?</h2>
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>The Key Insight</strong></p>
+</div>
+<div class="callout-content">
+<p>Two queries can be <strong>semantically identical</strong> but lexically different: <code>"What is the capital of France?"</code> and <code>"Tell me France's capital city"</code> should return the same cached answer.</p>
+</div>
+</div>
+</div>
+<div class="fragment">
+<p><strong>How it works:</strong></p>
+<ol type="1">
+<li>Embed the incoming query → vector</li>
+<li>Search cache for similar vectors (cosine similarity)</li>
+<li>If similarity &gt; threshold (e.g., 0.93) → return cached response</li>
+<li>Otherwise → call LLM, store result + embedding in cache</li>
+</ol>
+</div>
+</section>
+<section id="semantic-cache-flow" class="slide level2">
+<h2>Semantic Cache Flow</h2>
+<div class="cell" data-reveal="true" data-fig-width="10" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class=""><p></p>
+<div>
+<pre class="mermaid mermaid-js">graph TD
+    Q["New Query"] --&gt; E["Embed Query\n(sentence-transformers)"]
+    E --&gt; S["Cosine Similarity Search\nvs cache entries"]
+    S --&gt;|sim &gt; 0.93| HIT["Cache HIT\nReturn stored response"]
+    S --&gt;|sim ≤ 0.93| MISS["Cache MISS"]
+    MISS --&gt; LLM["Call LLM API"]
+    LLM --&gt; STORE["Store response + embedding\nin cache"]
+    STORE --&gt; RESP["Return response"]
+    HIT --&gt; RESP
+
+    style HIT fill:#00C9A7,stroke:#1C355E,color:#1C355E
+    style MISS fill:#FF7A5C,stroke:#1C355E,color:#1C355E
+    style LLM fill:#9B8EC0,stroke:#1C355E,color:#1C355E
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+</section>
+<section id="cost-impact-of-caching" class="slide level2">
+<h2>Cost Impact of Caching</h2>
+<table class="caption-top">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Scenario</th>
+<th>Daily Requests</th>
+<th>Cache Hit Rate</th>
+<th>Daily Cost</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>No cache</td>
+<td>10,000</td>
+<td>0%</td>
+<td>$150</td>
+<td>Baseline</td>
+</tr>
+<tr class="even">
+<td>Weak cache (sim &gt; 0.99)</td>
+<td>10,000</td>
+<td>15%</td>
+<td>$127.50</td>
+<td>Conservative, high precision</td>
+</tr>
+<tr class="odd">
+<td>Strong cache (sim &gt; 0.93)</td>
+<td>10,000</td>
+<td>30%</td>
+<td>$105</td>
+<td>…</td>
+</tr>
+<tr class="even">
+<td>Aggressive (sim &gt; 0.90)</td>
+<td>10,000</td>
+<td>45%</td>
+<td>$82.50</td>
+<td>Risk of semantic mismatches</td>
+</tr>
+</tbody>
+</table>
+<div class="callout callout-warning callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Threshold Trade-off</strong></p>
+</div>
+<div class="callout-content">
+<p>Lower threshold → more hits, but risk of <strong>semantically different</strong> queries getting wrong answers.</p>
+</div>
+</div>
+</div>
+</section></section>
+<section>
+<section id="e.-zero-downtime-reindexing" class="title-slide slide level1 sdaia-dark center" data-background-gradient="linear-gradient(135deg, #1C355E, #00C9A7)">
+<h1>E. Zero-Downtime Reindexing</h1>
 <p>Updating production without breaking it</p>
 </section>
 <section id="two-strategies" class="slide level2">
@@ -546,7 +686,7 @@
 <li>Works for small, regular additions</li>
 <li>Quality can degrade over time</li>
 </ul>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href=""></a>index.upsert(new_vectors)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href=""></a>index.upsert(new_vectors)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div><div class="column" style="width:50%;">
 <p><strong>Alias-Switching (Full Reindex)</strong></p>
 <ul>
@@ -587,25 +727,25 @@
 </section>
 <section id="code-pineconereindexer" class="slide level2">
 <h2>Code: PineconeReindexer</h2>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href=""></a><span class="kw">class</span> PineconeReindexer:</span>
-<span id="cb4-2"><a href=""></a>    <span class="kw">def</span> execute_zero_downtime_update(<span class="va">self</span>, chunks):</span>
-<span id="cb4-3"><a href=""></a>        <span class="co"># 1. Generate unique name</span></span>
-<span id="cb4-4"><a href=""></a>        timestamp <span class="op">=</span> datetime.utcnow().strftime(<span class="st">"%Y%m</span><span class="sc">%d</span><span class="st">%H%M"</span>)</span>
-<span id="cb4-5"><a href=""></a>        new_name <span class="op">=</span> <span class="ss">f"research-assistant-</span><span class="sc">{</span>timestamp<span class="sc">}</span><span class="ss">"</span></span>
-<span id="cb4-6"><a href=""></a></span>
-<span id="cb4-7"><a href=""></a>        <span class="co"># 2. Create &amp; Populate new index</span></span>
-<span id="cb4-8"><a href=""></a>        <span class="va">self</span>.create_index(new_name)</span>
-<span id="cb4-9"><a href=""></a>        <span class="va">self</span>.backfill_data(new_name, chunks)</span>
-<span id="cb4-10"><a href=""></a></span>
-<span id="cb4-11"><a href=""></a>        <span class="co"># 3. Get current live index</span></span>
-<span id="cb4-12"><a href=""></a>        old_name <span class="op">=</span> <span class="va">self</span>.alias_manager.get_live_index()</span>
-<span id="cb4-13"><a href=""></a></span>
-<span id="cb4-14"><a href=""></a>        <span class="co"># 4. ATOMIC SWITCH</span></span>
-<span id="cb4-15"><a href=""></a>        <span class="va">self</span>.alias_manager.set_live_index(new_name)</span>
-<span id="cb4-16"><a href=""></a></span>
-<span id="cb4-17"><a href=""></a>        <span class="co"># 5. Cleanup old index (after cooldown)</span></span>
-<span id="cb4-18"><a href=""></a>        <span class="cf">if</span> old_name <span class="kw">and</span> old_name <span class="op">!=</span> new_name:</span>
-<span id="cb4-19"><a href=""></a>            <span class="va">self</span>.pc.delete_index(old_name)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href=""></a><span class="kw">class</span> PineconeReindexer:</span>
+<span id="cb5-2"><a href=""></a>    <span class="kw">def</span> execute_zero_downtime_update(<span class="va">self</span>, chunks):</span>
+<span id="cb5-3"><a href=""></a>        <span class="co"># 1. Generate unique name</span></span>
+<span id="cb5-4"><a href=""></a>        timestamp <span class="op">=</span> datetime.utcnow().strftime(<span class="st">"%Y%m</span><span class="sc">%d</span><span class="st">%H%M"</span>)</span>
+<span id="cb5-5"><a href=""></a>        new_name <span class="op">=</span> <span class="ss">f"research-assistant-</span><span class="sc">{</span>timestamp<span class="sc">}</span><span class="ss">"</span></span>
+<span id="cb5-6"><a href=""></a></span>
+<span id="cb5-7"><a href=""></a>        <span class="co"># 2. Create &amp; Populate new index</span></span>
+<span id="cb5-8"><a href=""></a>        <span class="va">self</span>.create_index(new_name)</span>
+<span id="cb5-9"><a href=""></a>        <span class="va">self</span>.backfill_data(new_name, chunks)</span>
+<span id="cb5-10"><a href=""></a></span>
+<span id="cb5-11"><a href=""></a>        <span class="co"># 3. Get current live index</span></span>
+<span id="cb5-12"><a href=""></a>        old_name <span class="op">=</span> <span class="va">self</span>.alias_manager.get_live_index()</span>
+<span id="cb5-13"><a href=""></a></span>
+<span id="cb5-14"><a href=""></a>        <span class="co"># 4. ATOMIC SWITCH</span></span>
+<span id="cb5-15"><a href=""></a>        <span class="va">self</span>.alias_manager.set_live_index(new_name)</span>
+<span id="cb5-16"><a href=""></a></span>
+<span id="cb5-17"><a href=""></a>        <span class="co"># 5. Cleanup old index (after cooldown)</span></span>
+<span id="cb5-18"><a href=""></a>        <span class="cf">if</span> old_name <span class="kw">and</span> old_name <span class="op">!=</span> new_name:</span>
+<span id="cb5-19"><a href=""></a>            <span class="va">self</span>.pc.delete_index(old_name)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="safety-checklist" class="slide level2">
 <h2>Safety Checklist</h2>
@@ -630,72 +770,27 @@
 </div>
 </section></section>
 <section>
-<section id="e.-cost-planning" class="title-slide slide level1 sdaia-dark center" data-background-gradient="linear-gradient(135deg, #1C355E, #FF7A5C)">
-<h1>E. Cost Planning</h1>
+<section id="f.-cost-planning" class="title-slide slide level1 sdaia-dark center" data-background-gradient="linear-gradient(135deg, #1C355E, #FF7A5C)">
+<h1>F. Cost Planning</h1>
 <p>Budgeting for vector infrastructure</p>
 </section>
 <section id="cost-formula" class="slide level2">
 <h2>Cost Formula</h2>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href=""></a><span class="kw">def</span> estimate_monthly_cost(config, num_vectors,</span>
-<span id="cb5-2"><a href=""></a>                          reads_per_month, writes_per_month):</span>
-<span id="cb5-3"><a href=""></a>    <span class="co"># Vector storage</span></span>
-<span id="cb5-4"><a href=""></a>    bytes_per_vector <span class="op">=</span> config.dimension <span class="op">*</span> <span class="dv">4</span>  <span class="co"># float32</span></span>
-<span id="cb5-5"><a href=""></a>    storage_gb <span class="op">=</span> (num_vectors <span class="op">*</span> bytes_per_vector) <span class="op">/</span> <span class="fl">1e9</span></span>
-<span id="cb5-6"><a href=""></a></span>
-<span id="cb5-7"><a href=""></a>    <span class="co"># Metadata storage</span></span>
-<span id="cb5-8"><a href=""></a>    meta_gb <span class="op">=</span> (num_vectors <span class="op">*</span> config.meta_bytes) <span class="op">/</span> <span class="fl">1e9</span></span>
-<span id="cb5-9"><a href=""></a></span>
-<span id="cb5-10"><a href=""></a>    <span class="co"># Total cost</span></span>
-<span id="cb5-11"><a href=""></a>    storage_cost <span class="op">=</span> (storage_gb <span class="op">+</span> meta_gb) <span class="op">*</span> config.$<span class="op">/</span>gb</span>
-<span id="cb5-12"><a href=""></a>    read_cost <span class="op">=</span> (reads_per_month <span class="op">/</span> <span class="fl">1e6</span>) <span class="op">*</span> config.$<span class="op">/</span>M_reads</span>
-<span id="cb5-13"><a href=""></a>    write_cost <span class="op">=</span> (writes_per_month <span class="op">/</span> <span class="fl">1e6</span>) <span class="op">*</span> config.$<span class="op">/</span>M_writes</span>
-<span id="cb5-14"><a href=""></a></span>
-<span id="cb5-15"><a href=""></a>    <span class="cf">return</span> config.base_fee <span class="op">+</span> storage_cost <span class="op">+</span> read_cost <span class="op">+</span> write_cost</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="provider-comparison" class="slide level2">
-<h2>Provider Comparison</h2>
-<table class="caption-top">
-<thead>
-<tr class="header">
-<th>Provider</th>
-<th style="text-align: center;">Base Fee</th>
-<th style="text-align: center;">Storage/GB</th>
-<th style="text-align: center;">Reads/1M</th>
-<th style="text-align: center;">Writes/1M</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><strong>Pinecone Serverless</strong></td>
-<td style="text-align: center;">$0</td>
-<td style="text-align: center;">$0.33</td>
-<td style="text-align: center;">$8.25†</td>
-<td style="text-align: center;">$2.00†</td>
-</tr>
-<tr class="even">
-<td><strong>Weaviate Cloud</strong></td>
-<td style="text-align: center;">$25–75/mo</td>
-<td style="text-align: center;">Per-dimension pricing</td>
-<td style="text-align: center;">—</td>
-<td style="text-align: center;">—</td>
-</tr>
-<tr class="odd">
-<td><strong>Self-Hosted</strong></td>
-<td style="text-align: center;">~$50–300/mo VM</td>
-<td style="text-align: center;">$0.10 disk</td>
-<td style="text-align: center;">$0</td>
-<td style="text-align: center;">$0</td>
-</tr>
-<tr class="even">
-<td><strong>pgvector</strong></td>
-<td style="text-align: center;">DB cost</td>
-<td style="text-align: center;">Included</td>
-<td style="text-align: center;">Included</td>
-<td style="text-align: center;">Included</td>
-</tr>
-</tbody>
-</table>
-<p><em>†Pinecone charges per “read unit” / “write unit”, not per raw query — a single query may consume multiple units. Weaviate Cloud prices by vector dimensions stored, not GB. All figures are approximate as of early 2025 — <strong>always verify at each provider’s website</strong>.</em></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href=""></a><span class="kw">def</span> estimate_monthly_cost(config, num_vectors,</span>
+<span id="cb6-2"><a href=""></a>                          reads_per_month, writes_per_month):</span>
+<span id="cb6-3"><a href=""></a>    <span class="co"># Vector storage</span></span>
+<span id="cb6-4"><a href=""></a>    bytes_per_vector <span class="op">=</span> config.dimension <span class="op">*</span> <span class="dv">4</span>  <span class="co"># float32</span></span>
+<span id="cb6-5"><a href=""></a>    storage_gb <span class="op">=</span> (num_vectors <span class="op">*</span> bytes_per_vector) <span class="op">/</span> <span class="fl">1e9</span></span>
+<span id="cb6-6"><a href=""></a></span>
+<span id="cb6-7"><a href=""></a>    <span class="co"># Metadata storage</span></span>
+<span id="cb6-8"><a href=""></a>    meta_gb <span class="op">=</span> (num_vectors <span class="op">*</span> config.meta_bytes) <span class="op">/</span> <span class="fl">1e9</span></span>
+<span id="cb6-9"><a href=""></a></span>
+<span id="cb6-10"><a href=""></a>    <span class="co"># Total cost</span></span>
+<span id="cb6-11"><a href=""></a>    storage_cost <span class="op">=</span> (storage_gb <span class="op">+</span> meta_gb) <span class="op">*</span> config.$<span class="op">/</span>gb</span>
+<span id="cb6-12"><a href=""></a>    read_cost <span class="op">=</span> (reads_per_month <span class="op">/</span> <span class="fl">1e6</span>) <span class="op">*</span> config.$<span class="op">/</span>M_reads</span>
+<span id="cb6-13"><a href=""></a>    write_cost <span class="op">=</span> (writes_per_month <span class="op">/</span> <span class="fl">1e6</span>) <span class="op">*</span> config.$<span class="op">/</span>M_writes</span>
+<span id="cb6-14"><a href=""></a></span>
+<span id="cb6-15"><a href=""></a>    <span class="cf">return</span> config.base_fee <span class="op">+</span> storage_cost <span class="op">+</span> read_cost <span class="op">+</span> write_cost</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="cost-forecast" class="slide level2">
 <h2>Cost Forecast</h2>
@@ -746,8 +841,8 @@
 </table>
 </section></section>
 <section>
-<section id="f.-final-architecture" class="title-slide slide level1 sdaia-dark center" data-background-gradient="linear-gradient(135deg, #1C355E, #9B8EC0)">
-<h1>F. Final Architecture</h1>
+<section id="g.-final-architecture" class="title-slide slide level1 sdaia-dark center" data-background-gradient="linear-gradient(135deg, #1C355E, #9B8EC0)">
+<h1>G. Final Architecture</h1>
 <p>The Research Assistant Picture</p>
 </section>
 <section id="a-system-architecture" class="slide level2">
@@ -792,14 +887,14 @@
 </section>
 <section id="researchassistantservice" class="slide level2">
 <h2>ResearchAssistantService</h2>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href=""></a><span class="kw">class</span> ResearchAssistantService:</span>
-<span id="cb6-2"><a href=""></a>    <span class="co">"""Production entry point — integrates all components."""</span></span>
-<span id="cb6-3"><a href=""></a></span>
-<span id="cb6-4"><a href=""></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, vector_store, llm_client):</span>
-<span id="cb6-5"><a href=""></a>        <span class="va">self</span>.query_processor <span class="op">=</span> QueryProcessor()</span>
-<span id="cb6-6"><a href=""></a>        <span class="va">self</span>.retriever <span class="op">=</span> AdvancedRetriever(vector_store)</span>
-<span id="cb6-7"><a href=""></a>        <span class="va">self</span>.context_manager <span class="op">=</span> ContextManager(max_tokens<span class="op">=</span><span class="dv">3000</span>)</span>
-<span id="cb6-8"><a href=""></a>        <span class="va">self</span>.llm <span class="op">=</span> llm_client</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href=""></a><span class="kw">class</span> ResearchAssistantService:</span>
+<span id="cb7-2"><a href=""></a>    <span class="co">"""Production entry point — integrates all components."""</span></span>
+<span id="cb7-3"><a href=""></a></span>
+<span id="cb7-4"><a href=""></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, vector_store, llm_client):</span>
+<span id="cb7-5"><a href=""></a>        <span class="va">self</span>.query_processor <span class="op">=</span> QueryProcessor()</span>
+<span id="cb7-6"><a href=""></a>        <span class="va">self</span>.retriever <span class="op">=</span> AdvancedRetriever(vector_store)</span>
+<span id="cb7-7"><a href=""></a>        <span class="va">self</span>.context_manager <span class="op">=</span> ContextManager(max_tokens<span class="op">=</span><span class="dv">3000</span>)</span>
+<span id="cb7-8"><a href=""></a>        <span class="va">self</span>.llm <span class="op">=</span> llm_client</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p><strong>Integrates:</strong></p>
 <ul>
 <li>Query Understanding (Session 4)</li>
@@ -810,28 +905,28 @@
 </section>
 <section id="the-answer-method" class="slide level2">
 <h2>The <code>answer()</code> Method</h2>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href=""></a><span class="cf">async</span> <span class="kw">def</span> answer(<span class="va">self</span>, raw_query):</span>
-<span id="cb7-2"><a href=""></a>    <span class="co"># 1. Query Processing</span></span>
-<span id="cb7-3"><a href=""></a>    queries <span class="op">=</span> <span class="va">self</span>.query_processor.expand(raw_query)</span>
-<span id="cb7-4"><a href=""></a></span>
-<span id="cb7-5"><a href=""></a>    <span class="co"># 2. Hybrid Retrieval (per variation)</span></span>
-<span id="cb7-6"><a href=""></a>    all_candidates <span class="op">=</span> []</span>
-<span id="cb7-7"><a href=""></a>    <span class="cf">for</span> q <span class="kw">in</span> queries:</span>
-<span id="cb7-8"><a href=""></a>        results <span class="op">=</span> <span class="va">self</span>.retriever.retrieve(q, candidates<span class="op">=</span><span class="dv">50</span>)</span>
-<span id="cb7-9"><a href=""></a>        all_candidates.extend(results)</span>
-<span id="cb7-10"><a href=""></a></span>
-<span id="cb7-11"><a href=""></a>    <span class="co"># 3. Deduplicate + Global Re-rank</span></span>
-<span id="cb7-12"><a href=""></a>    unique <span class="op">=</span> {doc[<span class="st">'id'</span>]: doc <span class="cf">for</span> doc <span class="kw">in</span> all_candidates}</span>
-<span id="cb7-13"><a href=""></a>    final <span class="op">=</span> <span class="va">self</span>.retriever.rerank(</span>
-<span id="cb7-14"><a href=""></a>        raw_query, <span class="bu">list</span>(unique.values()), top_k<span class="op">=</span><span class="dv">5</span>)</span>
-<span id="cb7-15"><a href=""></a></span>
-<span id="cb7-16"><a href=""></a>    <span class="co"># 4. Context Management + Generation</span></span>
-<span id="cb7-17"><a href=""></a>    context <span class="op">=</span> <span class="va">self</span>.context_manager.<span class="bu">format</span>(final)</span>
-<span id="cb7-18"><a href=""></a>    response <span class="op">=</span> <span class="cf">await</span> <span class="va">self</span>.llm.generate(</span>
-<span id="cb7-19"><a href=""></a>        system<span class="op">=</span>CITATION_PROMPT,</span>
-<span id="cb7-20"><a href=""></a>        user<span class="op">=</span><span class="ss">f"Context:</span><span class="ch">\n</span><span class="sc">{</span>context<span class="sc">}</span><span class="ch">\n\n</span><span class="ss">Q: </span><span class="sc">{</span>raw_query<span class="sc">}</span><span class="ss">"</span>)</span>
-<span id="cb7-21"><a href=""></a></span>
-<span id="cb7-22"><a href=""></a>    <span class="cf">return</span> {<span class="st">"answer"</span>: response, <span class="st">"citations"</span>: final}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href=""></a><span class="cf">async</span> <span class="kw">def</span> answer(<span class="va">self</span>, raw_query):</span>
+<span id="cb8-2"><a href=""></a>    <span class="co"># 1. Query Processing</span></span>
+<span id="cb8-3"><a href=""></a>    queries <span class="op">=</span> <span class="va">self</span>.query_processor.expand(raw_query)</span>
+<span id="cb8-4"><a href=""></a></span>
+<span id="cb8-5"><a href=""></a>    <span class="co"># 2. Hybrid Retrieval (per variation)</span></span>
+<span id="cb8-6"><a href=""></a>    all_candidates <span class="op">=</span> []</span>
+<span id="cb8-7"><a href=""></a>    <span class="cf">for</span> q <span class="kw">in</span> queries:</span>
+<span id="cb8-8"><a href=""></a>        results <span class="op">=</span> <span class="va">self</span>.retriever.retrieve(q, candidates<span class="op">=</span><span class="dv">50</span>)</span>
+<span id="cb8-9"><a href=""></a>        all_candidates.extend(results)</span>
+<span id="cb8-10"><a href=""></a></span>
+<span id="cb8-11"><a href=""></a>    <span class="co"># 3. Deduplicate + Global Re-rank</span></span>
+<span id="cb8-12"><a href=""></a>    unique <span class="op">=</span> {doc[<span class="st">'id'</span>]: doc <span class="cf">for</span> doc <span class="kw">in</span> all_candidates}</span>
+<span id="cb8-13"><a href=""></a>    final <span class="op">=</span> <span class="va">self</span>.retriever.rerank(</span>
+<span id="cb8-14"><a href=""></a>        raw_query, <span class="bu">list</span>(unique.values()), top_k<span class="op">=</span><span class="dv">5</span>)</span>
+<span id="cb8-15"><a href=""></a></span>
+<span id="cb8-16"><a href=""></a>    <span class="co"># 4. Context Management + Generation</span></span>
+<span id="cb8-17"><a href=""></a>    context <span class="op">=</span> <span class="va">self</span>.context_manager.<span class="bu">format</span>(final)</span>
+<span id="cb8-18"><a href=""></a>    response <span class="op">=</span> <span class="cf">await</span> <span class="va">self</span>.llm.generate(</span>
+<span id="cb8-19"><a href=""></a>        system<span class="op">=</span>CITATION_PROMPT,</span>
+<span id="cb8-20"><a href=""></a>        user<span class="op">=</span><span class="ss">f"Context:</span><span class="ch">\n</span><span class="sc">{</span>context<span class="sc">}</span><span class="ch">\n\n</span><span class="ss">Q: </span><span class="sc">{</span>raw_query<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb8-21"><a href=""></a></span>
+<span id="cb8-22"><a href=""></a>    <span class="cf">return</span> {<span class="st">"answer"</span>: response, <span class="st">"citations"</span>: final}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="agentic-rag-beyond-single-shot" class="slide level2">
 <h2>Agentic RAG — Beyond Single-Shot</h2>
@@ -959,33 +1054,6 @@
 </tr>
 </tbody>
 </table>
-</section>
-<section id="the-module-04-journey" class="slide level2">
-<h2>The Module 04 Journey</h2>
-<div class="cell" data-reveal="true" data-fig-width="10" data-layout-align="default">
-<div class="cell-output-display">
-<div>
-<p></p><figure class=""><p></p>
-<div>
-<pre class="mermaid mermaid-js">graph LR
-    S1["Session 1&lt;br/&gt;Architecture"] --&gt; S2["Session 2&lt;br/&gt;Chunking"]
-    S2 --&gt; S3["Session 3&lt;br/&gt;Vector Storage"]
-    S3 --&gt; S4["Session 4&lt;br/&gt;Advanced Retrieval"]
-    S4 --&gt; S5["Session 5&lt;br/&gt;Eval Framework"]
-    S5 --&gt; S6["Session 6&lt;br/&gt;Production"]
-
-    style S1 fill:#9B8EC0,stroke:#1C355E,color:#fff
-    style S2 fill:#00C9A7,stroke:#1C355E,color:#fff
-    style S3 fill:#FF7A5C,stroke:#1C355E,color:#fff
-    style S4 fill:#9B8EC0,stroke:#1C355E,color:#fff
-    style S5 fill:#00C9A7,stroke:#1C355E,color:#fff
-    style S6 fill:#1C355E,stroke:#1C355E,color:#fff
-</pre>
-</div>
-<p></p></figure><p></p>
-</div>
-</div>
-</div>
 </section>
 <section id="key-takeaways" class="slide level2 sdaia-dark" data-background-color="#1C355E">
 <h2>Key Takeaways</h2>

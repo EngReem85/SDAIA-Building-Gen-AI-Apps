@@ -9,7 +9,7 @@
 <link href="02_chunking_strategies_files/libs/quarto-html/quarto-syntax-highlighting-587c61ba64f3a5504c4d52d930310e48.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
   <meta name="generator" content="quarto-1.8.26">
 
-  <meta name="dcterms.date" content="2026-04-21">
+  <meta name="dcterms.date" content="2026-04-24">
   <title>Chunking Strategies</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -204,7 +204,7 @@
 <div class="quarto-title-authors">
 </div>
 
-  <p class="date">2026-04-21</p>
+  <p class="date">2026-04-24</p>
 </section>
 <section>
 <section id="a.-why-chunking-matters" class="title-slide slide level1 sdaia-dark center" data-background-gradient="linear-gradient(135deg, #1C355E, #00C9A7)">
@@ -259,7 +259,10 @@
 <section id="chunk-size-trade-off" class="slide level2">
 <h2>Chunk Size Trade-off</h2>
 
-<img data-src="../assets/generated/plot_chunk_size_tradeoff.png" class="r-stretch"></section>
+<img data-src="../assets/internet_images/llamaindex_1.png" class="r-stretch"><blockquote>
+<p>SOURCE: <a href="https://www.llamaindex.ai/blog/evaluating-the-ideal-chunk-size-for-a-rag-system-using-llamaindex-6207e5d3fec5">LlamaIndex Blog</a>. Empirical results showing how chunk size affects response time, faithfulness, and relevancy.</p>
+</blockquote>
+</section>
 <section id="the-complete-idea-rule" class="slide level2">
 <h2>The Complete Idea Rule</h2>
 <div class="callout callout-tip callout-titled callout-style-default">
@@ -296,7 +299,7 @@
 <div>
 <p></p><figure class=""><p></p>
 <div>
-<pre class="mermaid mermaid-js">graph LR
+<pre class="mermaid mermaid-js">graph TD
     A["Full Document&lt;br/&gt;(10,000 chars)"] --&gt; B["Chunk 1&lt;br/&gt;(0-500)"]
     A --&gt; C["Chunk 2&lt;br/&gt;(400-900)"]
     A --&gt; D["Chunk 3&lt;br/&gt;(800-1300)"]
@@ -396,7 +399,7 @@ Chunk 4:                 |████████|</code></pre>
 <p><strong>Starting Point</strong></p>
 </div>
 <div class="callout-content">
-<p><code>chunk_size=800</code>, <code>chunk_overlap=150</code> is a solid baseline for research papers.</p>
+<p><code>chunk_size=800</code>, <code>chunk_overlap=150</code> is a solid baseline.</p>
 </div>
 </div>
 </div>

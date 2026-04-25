@@ -9,7 +9,7 @@
 <link href="01_rag_architecture_foundations_files/libs/quarto-html/quarto-syntax-highlighting-587c61ba64f3a5504c4d52d930310e48.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
   <meta name="generator" content="quarto-1.8.26">
 
-  <meta name="dcterms.date" content="2026-04-21">
+  <meta name="dcterms.date" content="2026-04-24">
   <title>RAG Architecture &amp; Foundations</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -138,7 +138,7 @@
 <div class="quarto-title-authors">
 </div>
 
-  <p class="date">2026-04-21</p>
+  <p class="date">2026-04-24</p>
 </section>
 <section>
 <section id="a.-the-rag-paradigm" class="title-slide slide level1 sdaia-dark center" data-background-gradient="linear-gradient(135deg, #1C355E, #00C9A7)">
@@ -482,12 +482,56 @@
 <section id="d.-the-case-for-rag" class="title-slide slide level1 sdaia-dark center" data-background-gradient="linear-gradient(135deg, #1C355E, #FF7A5C)">
 <h1>D. The Case for RAG</h1>
 <p>Why RAG dominates enterprise AI</p>
-</section>
-<section id="rag-strengths-radar" class="slide level2">
-<h2>RAG Strengths Radar</h2>
-
-<img data-src="../assets/generated/plot_rag_strengths_radar.png" class="r-stretch"><blockquote>
-<p>DISCLAIMER: This is a conceptual radar chart. The actual values would depend on the specific implementation and use case.</p>
+<table class="caption-top" style="width:100%;">
+<colgroup>
+<col style="width: 34%">
+<col style="width: 21%">
+<col style="width: 21%">
+<col style="width: 21%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Aspect</th>
+<th style="text-align: center;">Prompting</th>
+<th style="text-align: center;">RAG</th>
+<th style="text-align: center;">Fine-Tuning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Factuality</strong></td>
+<td style="text-align: center;">Low (Hallucinates)</td>
+<td style="text-align: center;"><strong>High (Grounded)</strong></td>
+<td style="text-align: center;">Moderate</td>
+</tr>
+<tr class="even">
+<td><strong>Adaptability</strong></td>
+<td style="text-align: center;">High (Instant)</td>
+<td style="text-align: center;"><strong>High (Instant)</strong></td>
+<td style="text-align: center;">Low (Requires retraining)</td>
+</tr>
+<tr class="odd">
+<td><strong>Setup Cost</strong></td>
+<td style="text-align: center;"><strong>Lowest</strong></td>
+<td style="text-align: center;">Moderate</td>
+<td style="text-align: center;">High</td>
+</tr>
+<tr class="even">
+<td><strong>Style Control</strong></td>
+<td style="text-align: center;">Low</td>
+<td style="text-align: center;">Low</td>
+<td style="text-align: center;"><strong>Highest</strong></td>
+</tr>
+<tr class="odd">
+<td><strong>Citation</strong></td>
+<td style="text-align: center;">No</td>
+<td style="text-align: center;"><strong>Yes</strong></td>
+<td style="text-align: center;">No</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>SOURCE: Based on industry consensus (Hotz, 2023; Microsoft Research, 2024). RAG is the optimal choice for knowledge-intensive tasks requiring high factuality and source attribution.</p>
 </blockquote>
 </section>
 <section id="rag-in-the-wild" class="slide level2">

@@ -9,7 +9,7 @@
 <link href="04_advanced_retrieval_query_processing_files/libs/quarto-html/quarto-syntax-highlighting-587c61ba64f3a5504c4d52d930310e48.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
   <meta name="generator" content="quarto-1.8.26">
 
-  <meta name="dcterms.date" content="2026-04-21">
+  <meta name="dcterms.date" content="2026-04-24">
   <title>Beyond Basic Search</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -204,7 +204,7 @@
 <div class="quarto-title-authors">
 </div>
 
-  <p class="date">2026-04-21</p>
+  <p class="date">2026-04-24</p>
 </section>
 <section>
 <section id="a.-why-simple-search-fails" class="title-slide slide level1 sdaia-dark center" data-background-gradient="linear-gradient(135deg, #1C355E, #00C9A7)">
@@ -552,115 +552,55 @@
 <h1>D. Query Understanding</h1>
 <p>Making queries retrieval-friendly</p>
 </section>
-<section id="preprocessing-pipeline" class="slide level2">
-<h2>Preprocessing Pipeline</h2>
-<div class="cell" data-reveal="true" data-fig-width="10" data-layout-align="default">
-<div class="cell-output-display">
-<div>
-<p></p><figure class=""><p></p>
-<div>
-<pre class="mermaid mermaid-js">flowchart LR
-    A["Raw Query"] --&gt; B["Normalize&lt;br/&gt;Whitespace"]
-    B --&gt; C["Expand&lt;br/&gt;Acronyms"]
-    C --&gt; D["Classify&lt;br/&gt;Intent"]
-    D --&gt; E["Route to&lt;br/&gt;Strategy"]
-
-    style A fill:#9B8EC0,stroke:#1C355E,color:#fff
-    style B fill:#00C9A7,stroke:#1C355E,color:#fff
-    style C fill:#00C9A7,stroke:#1C355E,color:#fff
-    style D fill:#FF7A5C,stroke:#1C355E,color:#fff
-    style E fill:#1C355E,stroke:#1C355E,color:#fff
-</pre>
-</div>
-<p></p></figure><p></p>
-</div>
-</div>
-</div>
-</section>
-<section id="code-preprocessor" class="slide level2">
-<h2>Code: Preprocessor</h2>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href=""></a><span class="kw">class</span> QueryPreprocessor:</span>
-<span id="cb6-2"><a href=""></a>    <span class="co">"""Cleans and normalizes queries before retrieval."""</span></span>
-<span id="cb6-3"><a href=""></a></span>
-<span id="cb6-4"><a href=""></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, acronym_map<span class="op">=</span><span class="va">None</span>):</span>
-<span id="cb6-5"><a href=""></a>        <span class="va">self</span>.acronym_map <span class="op">=</span> acronym_map <span class="kw">or</span> {</span>
-<span id="cb6-6"><a href=""></a>            <span class="st">"RAG"</span>: <span class="st">"Retrieval-Augmented Generation"</span>,</span>
-<span id="cb6-7"><a href=""></a>            <span class="st">"LLM"</span>: <span class="st">"Large Language Model"</span>,</span>
-<span id="cb6-8"><a href=""></a>            <span class="st">"NLP"</span>: <span class="st">"Natural Language Processing"</span>,</span>
-<span id="cb6-9"><a href=""></a>        }</span>
-<span id="cb6-10"><a href=""></a></span>
-<span id="cb6-11"><a href=""></a>    <span class="kw">def</span> preprocess(<span class="va">self</span>, query: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
-<span id="cb6-12"><a href=""></a>        query <span class="op">=</span> re.sub(<span class="vs">r'</span><span class="dv">\s</span><span class="op">+</span><span class="vs">'</span>, <span class="st">' '</span>, query.strip())</span>
-<span id="cb6-13"><a href=""></a>        <span class="cf">for</span> acronym, expansion <span class="kw">in</span> <span class="va">self</span>.acronym_map.items():</span>
-<span id="cb6-14"><a href=""></a>            <span class="cf">if</span> acronym <span class="kw">in</span> query.upper():</span>
-<span id="cb6-15"><a href=""></a>                query <span class="op">=</span> <span class="ss">f"</span><span class="sc">{</span>query<span class="sc">}</span><span class="ss"> (</span><span class="sc">{</span>expansion<span class="sc">}</span><span class="ss">)"</span></span>
-<span id="cb6-16"><a href=""></a>        <span class="cf">return</span> query</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
 <section id="intent-classification" class="slide level2">
 <h2>Intent Classification</h2>
-<table class="caption-top">
-<colgroup>
-<col style="width: 19%">
-<col style="width: 34%">
-<col style="width: 46%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Intent</th>
-<th>Trigger Words</th>
-<th>Retrieval Strategy</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><strong>Factual</strong></td>
-<td>“what is”, “define”</td>
-<td>Direct vector search</td>
-</tr>
-<tr class="even">
-<td><strong>Comparison</strong></td>
-<td>“compare”, “vs”, “difference”</td>
-<td>Multi-query retrieval</td>
-</tr>
-<tr class="odd">
-<td><strong>How-to</strong></td>
-<td>“how to”, “implement”, “build”</td>
-<td>Code-focused retrieval</td>
-</tr>
-<tr class="even">
-<td><strong>Troubleshooting</strong></td>
-<td>“why”, “error”, “fail”</td>
-<td>Diagnostic retrieval</td>
-</tr>
-</tbody>
-</table>
+<p>Instead of fragile keyword matching, use an <strong>LLM Classifier</strong> with <strong>Structured Output</strong>.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href=""></a><span class="im">from</span> enum <span class="im">import</span> Enum</span>
+<span id="cb6-2"><a href=""></a><span class="im">from</span> pydantic <span class="im">import</span> BaseModel</span>
+<span id="cb6-3"><a href=""></a></span>
+<span id="cb6-4"><a href=""></a><span class="kw">class</span> Intent(<span class="bu">str</span>, Enum):</span>
+<span id="cb6-5"><a href=""></a>    FACTUAL <span class="op">=</span> <span class="st">"factual"</span></span>
+<span id="cb6-6"><a href=""></a>    COMPARISON <span class="op">=</span> <span class="st">"comparison"</span></span>
+<span id="cb6-7"><a href=""></a>    TROUBLESHOOTING <span class="op">=</span> <span class="st">"troubleshooting"</span></span>
+<span id="cb6-8"><a href=""></a></span>
+<span id="cb6-9"><a href=""></a><span class="kw">class</span> QueryAnalysis(BaseModel):</span>
+<span id="cb6-10"><a href=""></a>    intent: Intent</span>
+<span id="cb6-11"><a href=""></a>    is_complex: <span class="bu">bool</span></span>
+<span id="cb6-12"><a href=""></a>    suggested_strategy: <span class="bu">str</span></span>
+<span id="cb6-13"><a href=""></a></span>
+<span id="cb6-14"><a href=""></a><span class="co"># LLM call with response_format</span></span>
+<span id="cb6-15"><a href=""></a>analysis <span class="op">=</span> client.chat.completions.create(</span>
+<span id="cb6-16"><a href=""></a>    model<span class="op">=</span><span class="st">"gpt-4o"</span>,</span>
+<span id="cb6-17"><a href=""></a>    messages<span class="op">=</span>[{<span class="st">"role"</span>: <span class="st">"user"</span>, <span class="st">"content"</span>: user_query}],</span>
+<span id="cb6-18"><a href=""></a>    response_format<span class="op">=</span>QueryAnalysis</span>
+<span id="cb6-19"><a href=""></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
-<section id="code-classifier" class="slide level2">
-<h2>Code: Classifier</h2>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href=""></a><span class="kw">def</span> classify_query_intent(query: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
-<span id="cb7-2"><a href=""></a>    <span class="co">"""Simple rule-based intent classifier."""</span></span>
-<span id="cb7-3"><a href=""></a>    q <span class="op">=</span> query.lower()</span>
-<span id="cb7-4"><a href=""></a></span>
-<span id="cb7-5"><a href=""></a>    <span class="cf">if</span> <span class="bu">any</span>(w <span class="kw">in</span> q <span class="cf">for</span> w <span class="kw">in</span> [<span class="st">"compare"</span>, <span class="st">"vs"</span>, <span class="st">"difference"</span>]):</span>
-<span id="cb7-6"><a href=""></a>        <span class="cf">return</span> <span class="st">"comparison"</span></span>
-<span id="cb7-7"><a href=""></a>    <span class="cf">elif</span> <span class="bu">any</span>(w <span class="kw">in</span> q <span class="cf">for</span> w <span class="kw">in</span> [<span class="st">"how to"</span>, <span class="st">"implement"</span>, <span class="st">"build"</span>]):</span>
-<span id="cb7-8"><a href=""></a>        <span class="cf">return</span> <span class="st">"how_to"</span></span>
-<span id="cb7-9"><a href=""></a>    <span class="cf">elif</span> <span class="bu">any</span>(w <span class="kw">in</span> q <span class="cf">for</span> w <span class="kw">in</span> [<span class="st">"why"</span>, <span class="st">"error"</span>, <span class="st">"fail"</span>]):</span>
-<span id="cb7-10"><a href=""></a>        <span class="cf">return</span> <span class="st">"troubleshooting"</span></span>
-<span id="cb7-11"><a href=""></a>    <span class="cf">else</span>:</span>
-<span id="cb7-12"><a href=""></a>        <span class="cf">return</span> <span class="st">"factual"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="callout callout-tip callout-titled callout-style-default">
-<div class="callout-body">
-<div class="callout-title">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<p><strong>Production Upgrade</strong></p>
-</div>
-<div class="callout-content">
-<p>Replace rule-based classification with an LLM call or fine-tuned classifier for nuanced intent detection.</p>
-</div>
-</div>
+<section id="semantic-routing" class="slide level2">
+<h2>Semantic Routing</h2>
+<p>For high-traffic systems, use <strong>Embeddings</strong> to route queries without an LLM call.</p>
+<div class="columns">
+<div class="column" style="width:50%;">
+<p><strong>How it Works</strong> - Create pre-defined “Route Embeddings” for each category. - Compare user query embedding to Route embeddings. - If similarity &gt; threshold, fire that route.</p>
+</div><div class="column" style="width:50%;">
+<p><strong>Why use it?</strong> - <strong>Latency</strong>: Sub-10ms routing vs 500ms+ for LLM. - <strong>Cost</strong>: Fraction of a cent per 1k queries. - <strong>Tools</strong>: <code>semantic-router</code> (by Aurelio AI) or simple vector similarity.</p>
+</div></div>
+</section>
+<section id="query-translation-text-to-filter" class="slide level2">
+<h2>Query Translation (Text-to-Filter)</h2>
+<p>Modern RAG doesn’t just search text—it generates <strong>Structured Filters</strong>.</p>
+<p><strong>User:</strong> “Show me the 2024 financial reports for the EMEA region.”</p>
+<div class="fragment">
+<p><strong>LLM Translation (Structured Output):</strong></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href=""></a><span class="kw">class</span> SearchFilters(BaseModel):</span>
+<span id="cb7-2"><a href=""></a>    year: <span class="bu">int</span></span>
+<span id="cb7-3"><a href=""></a>    region: <span class="bu">str</span></span>
+<span id="cb7-4"><a href=""></a>    document_type: <span class="bu">str</span></span>
+<span id="cb7-5"><a href=""></a></span>
+<span id="cb7-6"><a href=""></a><span class="co"># The LLM extracts entities into this schema:</span></span>
+<span id="cb7-7"><a href=""></a><span class="co"># { "year": 2024, "region": "EMEA", "document_type": "financial_report" }</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<blockquote>
+<p>This allows highly precise retrieval by combining <strong>Vector Search</strong> with <strong>Metadata Filtering</strong>.</p>
+</blockquote>
 </div>
 </section></section>
 <section>

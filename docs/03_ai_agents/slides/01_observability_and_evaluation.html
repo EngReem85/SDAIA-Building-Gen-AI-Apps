@@ -9,7 +9,7 @@
 <link href="01_observability_and_evaluation_files/libs/quarto-html/quarto-syntax-highlighting-587c61ba64f3a5504c4d52d930310e48.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
   <meta name="generator" content="quarto-1.8.26">
 
-  <meta name="dcterms.date" content="2026-04-21">
+  <meta name="dcterms.date" content="2026-04-24">
   <title>Observability &amp; Evaluation</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -204,7 +204,7 @@
 <div class="quarto-title-authors">
 </div>
 
-  <p class="date">2026-04-21</p>
+  <p class="date">2026-04-24</p>
 </section>
 <section>
 <section id="a.-the-black-box-problem" class="title-slide slide level1 sdaia-dark center" data-background-gradient="linear-gradient(135deg, #1C355E, #00C9A7)">
@@ -229,7 +229,7 @@
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>B</strong></td>
-<td style="text-align: left;">Structured Tracing</td>
+<td style="text-align: left;">Structured Tracing &amp; Langfuse</td>
 <td style="text-align: center;">~15 min</td>
 </tr>
 <tr class="odd">
@@ -239,16 +239,21 @@
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>D</strong></td>
-<td style="text-align: left;">Cost Tracking</td>
+<td style="text-align: left;">Cost Tracking &amp; Guardrails</td>
 <td style="text-align: center;">~10 min</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>E</strong></td>
-<td style="text-align: left;">DeepEval for Agents</td>
-<td style="text-align: center;">~20 min</td>
+<td style="text-align: left;">Production Logging &amp; Metrics</td>
+<td style="text-align: center;">~15 min</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>F</strong></td>
+<td style="text-align: left;">DeepEval for Agents</td>
+<td style="text-align: center;">~20 min</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>G</strong></td>
 <td style="text-align: left;">Wrap-up &amp; Lab Preview</td>
 <td style="text-align: center;">~5 min</td>
 </tr>
@@ -309,8 +314,8 @@
 </div>
 </section></section>
 <section>
-<section id="b.-structured-tracing" class="title-slide slide level1 sdaia-dark center" data-background-gradient="linear-gradient(135deg, #1C355E, #9B8EC0)">
-<h1>B. Structured Tracing</h1>
+<section id="b.-structured-tracing-langfuse" class="title-slide slide level1 sdaia-dark center" data-background-gradient="linear-gradient(135deg, #1C355E, #9B8EC0)">
+<h1>B. Structured Tracing &amp; Langfuse</h1>
 <p>Every step, captured and queryable</p>
 </section>
 <section id="what-a-good-trace-captures" class="slide level2">
@@ -366,44 +371,53 @@
 <span id="cb1-22"><a href=""></a>    status: <span class="bu">str</span>  <span class="co"># "running", "completed", "failed", "loop_detected"</span></span>
 <span id="cb1-23"><a href=""></a>    total_cost_usd: <span class="bu">float</span> <span class="op">=</span> <span class="fl">0.0</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
-<section id="the-agenttracer-class" class="slide level2 smaller">
-<h2>The AgentTracer Class</h2>
-<div class="columns">
-<div class="column" style="width:50%;">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href=""></a><span class="kw">class</span> AgentTracer:</span>
-<span id="cb2-2"><a href=""></a>    <span class="kw">def</span> start_trace(<span class="va">self</span>, agent_name,</span>
-<span id="cb2-3"><a href=""></a>                    query, model) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
-<span id="cb2-4"><a href=""></a>        <span class="co">"""Start a trace. Returns trace_id."""</span></span>
-<span id="cb2-5"><a href=""></a></span>
-<span id="cb2-6"><a href=""></a>    <span class="kw">def</span> log_step(<span class="va">self</span>, trace_id,</span>
-<span id="cb2-7"><a href=""></a>                 step: AgentStep):</span>
-<span id="cb2-8"><a href=""></a>        <span class="co">"""Log a step — accumulates cost."""</span></span>
-<span id="cb2-9"><a href=""></a></span>
-<span id="cb2-10"><a href=""></a>    <span class="kw">def</span> end_trace(<span class="va">self</span>, trace_id,</span>
-<span id="cb2-11"><a href=""></a>                  output, status<span class="op">=</span><span class="st">"completed"</span>):</span>
-<span id="cb2-12"><a href=""></a>        <span class="co">"""Mark trace as complete."""</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div><div class="column" style="width:50%;">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href=""></a>    <span class="kw">def</span> get_trace_json(<span class="va">self</span>,</span>
-<span id="cb3-2"><a href=""></a>                       trace_id) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
-<span id="cb3-3"><a href=""></a>        <span class="co">"""Export trace as JSON."""</span></span>
-<span id="cb3-4"><a href=""></a></span>
-<span id="cb3-5"><a href=""></a>    <span class="kw">def</span> print_summary(<span class="va">self</span>, trace_id):</span>
-<span id="cb3-6"><a href=""></a>        <span class="co">"""Human-readable summary."""</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>. . .</p>
+<section id="langfuse-setup" class="slide level2">
+<h2>Langfuse Setup</h2>
+<p>To get full visibility, we use a <strong>two-layer strategy</strong>:</p>
+<ol type="1">
+<li><strong>Auto-Trace (LiteLLM)</strong>: Captures every raw LLM input/output.</li>
+<li><strong>Structured Trace (<span class="citation" data-cites="observe">@observe</span>)</strong>: Captures your agent’s logical steps.</li>
+</ol>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href=""></a><span class="im">import</span> litellm</span>
+<span id="cb2-2"><a href=""></a><span class="im">from</span> langfuse <span class="im">import</span> observe</span>
+<span id="cb2-3"><a href=""></a></span>
+<span id="cb2-4"><a href=""></a><span class="co"># 1. Zero-code: LiteLLM sends every completion to Langfuse</span></span>
+<span id="cb2-5"><a href=""></a>litellm.success_callback <span class="op">=</span> [<span class="st">"langfuse"</span>]</span>
+<span id="cb2-6"><a href=""></a></span>
+<span id="cb2-7"><a href=""></a><span class="co"># 2. Structured: Wrap your agent methods to create a "Tree"</span></span>
+<span id="cb2-8"><a href=""></a><span class="at">@observe</span>(as_type<span class="op">=</span><span class="st">"agent"</span>)</span>
+<span id="cb2-9"><a href=""></a><span class="kw">def</span> run_agent(query):</span>
+<span id="cb2-10"><a href=""></a>    <span class="co"># This becomes the parent span</span></span>
+<span id="cb2-11"><a href=""></a>    <span class="cf">return</span> <span class="st">"Result"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="enriching-traces-with-context" class="slide level2 smaller">
+<h2>Enriching Traces with Context</h2>
+<p>The <code>propagate_attributes</code> context manager allows you to inject rich metadata without polluting your function signatures.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href=""></a><span class="im">from</span> langfuse <span class="im">import</span> observe, propagate_attributes</span>
+<span id="cb3-2"><a href=""></a> </span>
+<span id="cb3-3"><a href=""></a><span class="at">@observe</span>(as_type<span class="op">=</span><span class="st">"tool"</span>)</span>
+<span id="cb3-4"><a href=""></a><span class="kw">def</span> call_tool(<span class="va">self</span>, name, args):</span>
+<span id="cb3-5"><a href=""></a>    <span class="co"># 1. Propagate metadata and tags to this span and its children</span></span>
+<span id="cb3-6"><a href=""></a>    <span class="cf">with</span> propagate_attributes(</span>
+<span id="cb3-7"><a href=""></a>        metadata<span class="op">=</span>{<span class="st">"tool_version"</span>: <span class="st">"1.0.2"</span>, <span class="st">"user_id"</span>: <span class="st">"user_123"</span>},</span>
+<span id="cb3-8"><a href=""></a>        tags<span class="op">=</span>[<span class="st">"production"</span>, <span class="st">"critical-path"</span>]</span>
+<span id="cb3-9"><a href=""></a>    ):</span>
+<span id="cb3-10"><a href=""></a>        result <span class="op">=</span> <span class="va">self</span>.execute(name, args)</span>
+<span id="cb3-11"><a href=""></a>    </span>
+<span id="cb3-12"><a href=""></a>    <span class="cf">return</span> result</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="callout callout-note callout-titled callout-style-default">
 <div class="callout-body">
 <div class="callout-title">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
-<p><strong>In Production</strong></p>
+<p><strong>Note</strong></p>
 </div>
 <div class="callout-content">
-<p>Send data to <strong>Datadog</strong>, <strong>LangSmith</strong>, or <strong>Arize</strong>. For this course, we log to console and export to JSON.</p>
+<p>In our labs, we use a <code>SimpleObserver</code> that mirrors this API exactly—allowing you to switch to production Langfuse with a single import change.</p>
 </div>
 </div>
 </div>
-</div></div>
 </section>
 <section id="trace-output-example" class="slide level2 smaller">
 <h2>Trace Output Example</h2>
@@ -477,28 +491,20 @@ Answer: The population of Paris is approximately 2.1 million.
 </section>
 <section id="three-detection-strategies" class="slide level2">
 <h2>Three Detection Strategies</h2>
-<div class="cell" data-reveal="true" data-fig-width="9" data-layout-align="default">
-<div class="cell-output-display">
-<div>
-<p></p><figure class=""><p></p>
-<div>
-<pre class="mermaid mermaid-js">graph LR
-    TC["New Tool Call"] --&gt; E{"Exact Match?"}
-    E -- "Yes" --&gt; Loop["🛑 Loop Detected"]
-    E -- "No" --&gt; F{"Fuzzy Match?"}
-    F -- "Yes" --&gt; Loop
-    F -- "No" --&gt; S{"Output Stagnant?"}
-    S -- "Yes" --&gt; Loop
-    S -- "No" --&gt; Exec["✅ Execute Tool"]
-
-    style Loop fill:#FF7A5C,stroke:#1C355E,color:#1C355E
-    style Exec fill:#00C9A7,stroke:#1C355E,color:#1C355E
-</pre>
-</div>
-<p></p></figure><p></p>
-</div>
-</div>
-</div>
+<p>Loops appear in two places — we need a different check for each:</p>
+<div class="columns">
+<div class="column" style="width:50%;">
+<p><strong>Tool-call checks</strong> (before each tool executes)</p>
+<ol type="1">
+<li>Exact Match — same tool + identical args</li>
+<li>Fuzzy Match — same tool + suspiciously similar args</li>
+</ol>
+</div><div class="column" style="width:50%;">
+<p><strong>Reasoning check</strong> (after each LLM response)</p>
+<ol start="3" type="1">
+<li>Output Stagnation — the agent keeps saying the same thing</li>
+</ol>
+</div></div>
 </section>
 <section id="strategy-1-exact-match" class="slide level2 smaller">
 <h2>Strategy 1: Exact Match</h2>
@@ -550,15 +556,23 @@ Answer: The population of Paris is approximately 2.1 million.
 <p><strong>Similar (but not identical) tool calls — catches minor rephrasing.</strong></p>
 <div class="columns">
 <div class="column" style="width:55%;">
+<p>We compare <strong>argument strings only</strong> (not the tool name), tokenised into word sets:</p>
 <pre><code>Jaccard(A, B) = |A ∩ B| / |A ∪ B|
 
-"how to code python" ∩ "python programming tutorial"
-→ Shared: {python}
-→ 1/6 = 0.16 ← Different query ✅
+# Call 1: search("Paris population")
+args_A = {Paris, population}
 
-"search(Paris population)" ∩ "search(population of Paris)"
-→ Shared: {population, Paris}
-→ 2/3 = 0.66 ← Suspicious 🚩</code></pre>
+# Call 2: search("population of Paris")
+args_B = {population, of, Paris}
+
+Intersection = {Paris, population}        → 2
+Union        = {Paris, population, of}    → 3
+Jaccard = 2/3 = 0.67  ← Suspicious 🚩
+
+# A genuinely different call for comparison:
+args_A = {how, to, code, python}          → search("how to code python")
+args_B = {python, programming, tutorial}  → search("python programming tutorial")
+Jaccard = 1/6 = 0.17  ← Different query ✅</code></pre>
 </div><div class="column" style="width:45%;">
 <div class="callout callout-note callout-titled callout-style-default">
 <div class="callout-body">
@@ -569,7 +583,7 @@ Answer: The population of Paris is approximately 2.1 million.
 <p><strong>How Jaccard works</strong></p>
 </div>
 <div class="callout-content">
-<p>Count the <strong>shared words</strong> divided by the <strong>total unique words</strong>.</p>
+<p>Count the <strong>shared words</strong> divided by the <strong>total unique words</strong> across both sets.</p>
 <p>A score near <strong>1.0</strong> = almost identical. A score near <strong>0.0</strong> = completely different.</p>
 </div>
 </div>
@@ -579,7 +593,19 @@ Answer: The population of Paris is approximately 2.1 million.
 </section>
 <section id="strategy-3-output-stagnation" class="slide level2 smaller">
 <h2>Strategy 3: Output Stagnation</h2>
-<p><strong>The agent keeps producing the same response — it’s stuck, not exploring.</strong></p>
+<div class="callout callout-important callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>A different kind of loop</strong></p>
+</div>
+<div class="callout-content">
+<p>Strategies 1 &amp; 2 detect repeated <strong>tool calls</strong>. Stagnation detects when the agent’s <strong>reasoning text</strong> is stuck — it runs after each LLM response, not before tool execution.</p>
+</div>
+</div>
+</div>
 <div class="fragment">
 <div class="columns">
 <div class="column" style="width:50%;">
@@ -587,19 +613,16 @@ Answer: The population of Paris is approximately 2.1 million.
 <pre><code>Step 4: "I need to search for more info..."
 Step 5: "I need to search for more info..."
 Step 6: "I need to search for more info..."</code></pre>
-<p>The agent’s <strong>conclusions aren’t changing</strong> even though it keeps running.</p>
+<p>The agent keeps producing nearly identical <em>reasoning</em>, even if it issues different tool calls.</p>
 </div><div class="column" style="width:50%;">
 <p><strong>How we detect it:</strong></p>
-<p>We look at the last N responses and ask: <em>“Are they saying the same thing?”</em></p>
-<p>We compare them <strong>word by word</strong> — if enough words keep repeating across responses, the agent is looping in thought, not just in action.</p>
+<p>After each LLM response, we add the text to <code>output_history</code>.</p>
+<p>We then compute the average word overlap across the last N entries — a high score means the agent is thinking in circles.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href=""></a>recent_outputs <span class="op">=</span> output_history[<span class="op">-</span>stagnation_window:]</span>
+<span id="cb8-2"><a href=""></a></span>
+<span id="cb8-3"><a href=""></a><span class="cf">if</span> avg_pairwise_word_overlap(recent_outputs) <span class="op">&gt;=</span> threshold:</span>
+<span id="cb8-4"><a href=""></a>    <span class="cf">return</span> LoopDetected(strategy<span class="op">=</span><span class="st">"stagnation"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div></div>
-</div>
-<div class="fragment">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href=""></a><span class="co"># Compare overlap in the last N responses</span></span>
-<span id="cb8-2"><a href=""></a>recent_outputs <span class="op">=</span> output_history[<span class="op">-</span>stagnation_window:]</span>
-<span id="cb8-3"><a href=""></a></span>
-<span id="cb8-4"><a href=""></a><span class="cf">if</span> avg_pairwise_word_overlap(recent_outputs) <span class="op">&gt;=</span> threshold:</span>
-<span id="cb8-5"><a href=""></a>    <span class="cf">return</span> LoopDetected(strategy<span class="op">=</span><span class="st">"stagnation"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="the-circuit-breaker-pattern" class="slide level2 smaller">
@@ -700,7 +723,7 @@ Step 6: "I need to search for more info..."</code></pre>
 <span id="cb12-6"><a href=""></a>    <span class="kw">def</span> add_cost(<span class="va">self</span>, cost: <span class="bu">float</span>) <span class="op">-&gt;</span> <span class="bu">bool</span>:</span>
 <span id="cb12-7"><a href=""></a>        <span class="va">self</span>.total_spent <span class="op">+=</span> cost</span>
 <span id="cb12-8"><a href=""></a>        <span class="cf">if</span> <span class="va">self</span>.total_spent <span class="op">&gt;</span> <span class="va">self</span>.budget_limit:</span>
-<span id="cb12-9"><a href=""></a>            <span class="cf">raise</span> BudgetExceededError(</span>
+<span id="cb12-9"><a href=""></a>            <span class="cf">raise</span> TokenBudgetExceeded(</span>
 <span id="cb12-10"><a href=""></a>                <span class="ss">f"Query cost $</span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>total_spent<span class="sc">:.2f}</span><span class="ss"> "</span></span>
 <span id="cb12-11"><a href=""></a>                <span class="ss">f"exceeds budget of $</span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>budget_limit<span class="sc">:.2f}</span><span class="ss">"</span></span>
 <span id="cb12-12"><a href=""></a>            )</span>
@@ -710,10 +733,133 @@ Step 6: "I need to search for more info..."</code></pre>
 <p><strong>Production Tip:</strong> Set per-query budgets ($1–5) <strong>AND</strong> daily budgets ($50–500). A single runaway agent should never bankrupt your project.</p>
 </blockquote>
 </div>
+</section>
+<section id="budget-guardrails-pattern" class="slide level2 smaller">
+<h2>Budget Guardrails Pattern</h2>
+<p>Use litellm’s <code>completion_cost()</code> to track actual costs securely:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href=""></a><span class="im">from</span> datetime <span class="im">import</span> date</span>
+<span id="cb13-2"><a href=""></a><span class="im">from</span> threading <span class="im">import</span> Lock</span>
+<span id="cb13-3"><a href=""></a></span>
+<span id="cb13-4"><a href=""></a><span class="im">from</span> src.exceptions <span class="im">import</span> TokenBudgetExceeded</span>
+<span id="cb13-5"><a href=""></a></span>
+<span id="cb13-6"><a href=""></a><span class="kw">class</span> BudgetGuard:</span>
+<span id="cb13-7"><a href=""></a>    <span class="co">"""Enforce daily and monthly API spend limits."""</span></span>
+<span id="cb13-8"><a href=""></a></span>
+<span id="cb13-9"><a href=""></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, daily_limit_usd: <span class="bu">float</span>, monthly_limit_usd: <span class="bu">float</span>):</span>
+<span id="cb13-10"><a href=""></a>        <span class="va">self</span>.daily_limit <span class="op">=</span> daily_limit_usd</span>
+<span id="cb13-11"><a href=""></a>        <span class="va">self</span>.monthly_limit <span class="op">=</span> monthly_limit_usd</span>
+<span id="cb13-12"><a href=""></a>        <span class="va">self</span>._daily_spend: <span class="bu">dict</span>[<span class="bu">str</span>, <span class="bu">float</span>] <span class="op">=</span> {}</span>
+<span id="cb13-13"><a href=""></a>        <span class="va">self</span>._lock <span class="op">=</span> Lock()</span>
+<span id="cb13-14"><a href=""></a></span>
+<span id="cb13-15"><a href=""></a>    <span class="kw">def</span> check_and_charge(<span class="va">self</span>, cost_usd: <span class="bu">float</span>) <span class="op">-&gt;</span> <span class="bu">bool</span>:</span>
+<span id="cb13-16"><a href=""></a>        <span class="co">"""Returns True if spend is allowed, raises TokenBudgetExceeded otherwise."""</span></span>
+<span id="cb13-17"><a href=""></a>        <span class="cf">with</span> <span class="va">self</span>._lock:</span>
+<span id="cb13-18"><a href=""></a>            day_key <span class="op">=</span> date.today().isoformat()</span>
+<span id="cb13-19"><a href=""></a>            day_spend <span class="op">=</span> <span class="va">self</span>._daily_spend.get(day_key, <span class="dv">0</span>)</span>
+<span id="cb13-20"><a href=""></a></span>
+<span id="cb13-21"><a href=""></a>            <span class="cf">if</span> day_spend <span class="op">+</span> cost_usd <span class="op">&gt;</span> <span class="va">self</span>.daily_limit:</span>
+<span id="cb13-22"><a href=""></a>                <span class="cf">raise</span> TokenBudgetExceeded(<span class="ss">f"Daily budget $</span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>daily_limit<span class="sc">}</span><span class="ss"> reached"</span>)</span>
+<span id="cb13-23"><a href=""></a></span>
+<span id="cb13-24"><a href=""></a>            <span class="va">self</span>._daily_spend[day_key] <span class="op">=</span> day_spend <span class="op">+</span> cost_usd</span>
+<span id="cb13-25"><a href=""></a>            <span class="cf">return</span> <span class="va">True</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="cost-anomaly-detection" class="slide level2 smaller">
+<h2>Cost Anomaly Detection</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href=""></a><span class="co"># Simple z-score anomaly detector for hourly cost</span></span>
+<span id="cb14-2"><a href=""></a><span class="im">import</span> statistics</span>
+<span id="cb14-3"><a href=""></a></span>
+<span id="cb14-4"><a href=""></a><span class="kw">class</span> CostAnomalyDetector:</span>
+<span id="cb14-5"><a href=""></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, window: <span class="bu">int</span> <span class="op">=</span> <span class="dv">24</span>, z_threshold: <span class="bu">float</span> <span class="op">=</span> <span class="fl">2.5</span>):</span>
+<span id="cb14-6"><a href=""></a>        <span class="va">self</span>.history: <span class="bu">list</span>[<span class="bu">float</span>] <span class="op">=</span> []</span>
+<span id="cb14-7"><a href=""></a>        <span class="va">self</span>.window <span class="op">=</span> window</span>
+<span id="cb14-8"><a href=""></a>        <span class="va">self</span>.z_threshold <span class="op">=</span> z_threshold</span>
+<span id="cb14-9"><a href=""></a></span>
+<span id="cb14-10"><a href=""></a>    <span class="kw">def</span> check(<span class="va">self</span>, hourly_cost: <span class="bu">float</span>) <span class="op">-&gt;</span> <span class="bu">bool</span>:</span>
+<span id="cb14-11"><a href=""></a>        <span class="cf">if</span> <span class="bu">len</span>(<span class="va">self</span>.history) <span class="op">&lt;</span> <span class="va">self</span>.window:</span>
+<span id="cb14-12"><a href=""></a>            <span class="va">self</span>.history.append(hourly_cost)</span>
+<span id="cb14-13"><a href=""></a>            <span class="cf">return</span> <span class="va">False</span></span>
+<span id="cb14-14"><a href=""></a></span>
+<span id="cb14-15"><a href=""></a>        mean <span class="op">=</span> statistics.mean(<span class="va">self</span>.history[<span class="op">-</span><span class="va">self</span>.window:])</span>
+<span id="cb14-16"><a href=""></a>        stdev <span class="op">=</span> statistics.stdev(<span class="va">self</span>.history[<span class="op">-</span><span class="va">self</span>.window:])</span>
+<span id="cb14-17"><a href=""></a>        z_score <span class="op">=</span> (hourly_cost <span class="op">-</span> mean) <span class="op">/</span> (stdev <span class="kw">or</span> <span class="dv">1</span>)</span>
+<span id="cb14-18"><a href=""></a></span>
+<span id="cb14-19"><a href=""></a>        <span class="va">self</span>.history.append(hourly_cost)</span>
+<span id="cb14-20"><a href=""></a>        <span class="cf">if</span> <span class="bu">abs</span>(z_score) <span class="op">&gt;</span> <span class="va">self</span>.z_threshold:</span>
+<span id="cb14-21"><a href=""></a>            <span class="bu">print</span>(<span class="ss">f"Anomaly detected! Z-Score: </span><span class="sc">{</span>z_score<span class="sc">:.2f}</span><span class="ss">"</span>)</span>
+<span id="cb14-22"><a href=""></a>            <span class="cf">return</span> <span class="va">True</span></span>
+<span id="cb14-23"><a href=""></a>        <span class="cf">return</span> <span class="va">False</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section></section>
 <section>
-<section id="e.-deepeval-for-agents" class="title-slide slide level1 sdaia-dark center" data-background-gradient="linear-gradient(135deg, #1C355E, #9B8EC0)">
-<h1>E. DeepEval for Agents</h1>
+<section id="e.-production-logging-metrics" class="title-slide slide level1 sdaia-dark center" data-background-gradient="linear-gradient(135deg, #FF7A5C, #1C355E)">
+<h1>E. Production Logging &amp; Metrics</h1>
+<p>Going from traces to aggregations.</p>
+</section>
+<section id="prometheus-metrics-design-table" class="slide level2">
+<h2>Prometheus Metrics — Design Table</h2>
+<table class="caption-top">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Metric Name</th>
+<th>Type</th>
+<th>Labels</th>
+<th>Measures</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>agent_requests_total</code></td>
+<td>Counter</td>
+<td>model, cache_hit, status</td>
+<td>Every completed request</td>
+</tr>
+<tr class="even">
+<td><code>agent_request_latency_ms</code></td>
+<td>Histogram</td>
+<td>—</td>
+<td>Latency distribution</td>
+</tr>
+<tr class="odd">
+<td><code>agent_tokens_total</code></td>
+<td>Counter</td>
+<td>model, token_type</td>
+<td>Input/output tokens</td>
+</tr>
+<tr class="even">
+<td><code>agent_cost_usd_total</code></td>
+<td>Counter</td>
+<td>model</td>
+<td>Cumulative spend</td>
+</tr>
+</tbody>
+</table>
+<p><strong>API reminder:</strong> <code>Counter</code> → only up (<code>inc</code>). <code>Gauge</code> → up/down (<code>inc</code>/<code>dec</code>/<code>set</code>). <code>Histogram</code> → <code>observe(value)</code>.</p>
+</section>
+<section id="exposing-the-metrics-endpoint" class="slide level2">
+<h2>Exposing the /metrics Endpoint</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href=""></a><span class="co"># FastAPI integration</span></span>
+<span id="cb15-2"><a href=""></a><span class="im">from</span> prometheus_client <span class="im">import</span> make_asgi_app</span>
+<span id="cb15-3"><a href=""></a><span class="im">from</span> fastapi <span class="im">import</span> FastAPI</span>
+<span id="cb15-4"><a href=""></a></span>
+<span id="cb15-5"><a href=""></a>app <span class="op">=</span> FastAPI()</span>
+<span id="cb15-6"><a href=""></a></span>
+<span id="cb15-7"><a href=""></a><span class="co"># Mount Prometheus metrics at /metrics</span></span>
+<span id="cb15-8"><a href=""></a>metrics_app <span class="op">=</span> make_asgi_app()</span>
+<span id="cb15-9"><a href=""></a>app.mount(<span class="st">"/metrics"</span>, metrics_app)</span>
+<span id="cb15-10"><a href=""></a></span>
+<span id="cb15-11"><a href=""></a><span class="co"># Now Prometheus can scrape:</span></span>
+<span id="cb15-12"><a href=""></a><span class="co"># GET http://api:8000/metrics</span></span>
+<span id="cb15-13"><a href=""></a><span class="co"># → # HELP agent_requests_total ...</span></span>
+<span id="cb15-14"><a href=""></a><span class="co"># → agent_requests_total{model="gpt-4o",cache_hit="false"} 1423</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section></section>
+<section>
+<section id="f.-deepeval-for-agents" class="title-slide slide level1 sdaia-dark center" data-background-gradient="linear-gradient(135deg, #1C355E, #9B8EC0)">
+<h1>F. DeepEval for Agents</h1>
 <p>Production-grade evaluation framework</p>
 </section>
 <section id="the-evaluation-problem" class="slide level2">
@@ -876,34 +1022,30 @@ Step 6: "I need to search for more info..."</code></pre>
 </ul>
 </div></div>
 </section>
-<section id="llm-tracing-with-observe" class="slide level2 smaller">
-<h2>LLM Tracing with <span class="citation" data-cites="observe">@observe</span></h2>
+<section id="unified-tracing-with-observe" class="slide level2 smaller">
+<h2>Unified Tracing with <span class="citation" data-cites="observe">@observe</span></h2>
+<p><code>@observe</code> is the <strong>industry standard pattern</strong> for automatic telemetry. Use the exact same code for monitoring OR evaluation:</p>
 <div class="columns">
 <div class="column" style="width:55%;">
-<p><code>@observe</code> is the <strong>industry standard pattern</strong> for automatic telemetry. Use the same code for different tools:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href=""></a><span class="co"># Option 1: DeepEval (Focused on Evaluation)</span></span>
-<span id="cb13-2"><a href=""></a><span class="im">from</span> deepeval.tracing <span class="im">import</span> observe</span>
-<span id="cb13-3"><a href=""></a></span>
-<span id="cb13-4"><a href=""></a><span class="co"># Option 2: Langfuse (Focused on Monitoring)</span></span>
-<span id="cb13-5"><a href=""></a><span class="co"># from langfuse import observe</span></span>
-<span id="cb13-6"><a href=""></a></span>
-<span id="cb13-7"><a href=""></a><span class="at">@observe</span>()</span>
-<span id="cb13-8"><a href=""></a><span class="cf">async</span> <span class="kw">def</span> run_agent(<span class="va">self</span>, query: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
-<span id="cb13-9"><a href=""></a>    <span class="co"># Captures: steps, tool calls, and reasoning</span></span>
-<span id="cb13-10"><a href=""></a>    <span class="cf">return</span> final_answer</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href=""></a><span class="co"># The implementation is identical</span></span>
+<span id="cb16-2"><a href=""></a><span class="im">from</span> deepeval.tracing <span class="im">import</span> observe</span>
+<span id="cb16-3"><a href=""></a><span class="co"># OR: from langfuse import observe</span></span>
+<span id="cb16-4"><a href=""></a></span>
+<span id="cb16-5"><a href=""></a><span class="at">@observe</span>(name<span class="op">=</span><span class="st">"Run Agent"</span>, <span class="bu">type</span><span class="op">=</span><span class="st">"agent"</span>) <span class="co"># type for DeepEval, as_type for Langfuse</span></span>
+<span id="cb16-6"><a href=""></a><span class="cf">async</span> <span class="kw">def</span> run(<span class="va">self</span>, query):</span>
+<span id="cb16-7"><a href=""></a>    <span class="co"># Logic...</span></span>
+<span id="cb16-8"><a href=""></a>    <span class="cf">return</span> answer</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div><div class="column" style="width:45%;">
-<p>Each decorated function becomes one <strong>span</strong>.</p>
 <div class="callout callout-tip callout-titled callout-style-default">
 <div class="callout-body">
 <div class="callout-title">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
-<p><strong>The Shared Pattern</strong></p>
+<p><strong>The Universal Pattern</strong></p>
 </div>
 <div class="callout-content">
-<p>Whether you choose <strong>DeepEval</strong> or <strong>Langfuse</strong>, the code remains identical. This “Open Pattern” makes your observability stack pluggable and future-proof.</p>
-<p><a href="https://deepeval.com/docs/evaluation-llm-tracing">Read more: DeepEval Tracing Documentation</a> <a href="https://langfuse.com/docs/sdk/python/decorators">Read more: Langfuse Tracing</a></p>
+<p>Because they share the same API, you can switch from <strong>DeepEval</strong> (for CI/CD evals) to <strong>Langfuse</strong> (for Production monitoring) by just changing the import.</p>
 </div>
 </div>
 </div>
@@ -912,19 +1054,19 @@ Step 6: "I need to search for more info..."</code></pre>
 <section id="tracing-agent-components" class="slide level2 smaller">
 <h2>Tracing Agent Components</h2>
 <p>The pattern scales across your entire agent class — every decorated method becomes a nested span in the trace:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href=""></a><span class="im">from</span> deepeval.tracing <span class="im">import</span> observe <span class="co"># or langfuse with some little changes</span></span>
-<span id="cb14-2"><a href=""></a></span>
-<span id="cb14-3"><a href=""></a><span class="kw">class</span> ReactAgent:</span>
-<span id="cb14-4"><a href=""></a>    <span class="at">@observe</span>(<span class="bu">type</span><span class="op">=</span><span class="st">"agent"</span>)   <span class="co"># ← root span: the agent's main run</span></span>
-<span id="cb14-5"><a href=""></a>    <span class="kw">def</span> run(<span class="va">self</span>, query): ...</span>
-<span id="cb14-6"><a href=""></a></span>
-<span id="cb14-7"><a href=""></a>    <span class="at">@observe</span>(<span class="bu">type</span><span class="op">=</span><span class="st">"llm"</span>)     <span class="co"># ← child span: one LLM call</span></span>
-<span id="cb14-8"><a href=""></a>    <span class="kw">def</span> call_llm(<span class="va">self</span>, messages): ...</span>
-<span id="cb14-9"><a href=""></a></span>
-<span id="cb14-10"><a href=""></a>    <span class="at">@observe</span>(<span class="bu">type</span><span class="op">=</span><span class="st">"tool"</span>)    <span class="co"># ← child span: one tool execution</span></span>
-<span id="cb14-11"><a href=""></a>    <span class="kw">def</span> execute_tool(<span class="va">self</span>, name, args): ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href=""></a><span class="im">from</span> deepeval.tracing <span class="im">import</span> observe</span>
+<span id="cb17-2"><a href=""></a></span>
+<span id="cb17-3"><a href=""></a><span class="kw">class</span> ReactAgent:</span>
+<span id="cb17-4"><a href=""></a>    <span class="at">@observe</span>(<span class="bu">type</span><span class="op">=</span><span class="st">"agent"</span>)      <span class="co"># ← Root span</span></span>
+<span id="cb17-5"><a href=""></a>    <span class="kw">def</span> run(<span class="va">self</span>, query): ...</span>
+<span id="cb17-6"><a href=""></a></span>
+<span id="cb17-7"><a href=""></a>    <span class="at">@observe</span>(<span class="bu">type</span><span class="op">=</span><span class="st">"llm"</span>)        <span class="co"># ← LLM call</span></span>
+<span id="cb17-8"><a href=""></a>    <span class="kw">def</span> call_llm(<span class="va">self</span>, messages): ...</span>
+<span id="cb17-9"><a href=""></a></span>
+<span id="cb17-10"><a href=""></a>    <span class="at">@observe</span>(<span class="bu">type</span><span class="op">=</span><span class="st">"retriever"</span>)  <span class="co"># ← Search/RAG tool</span></span>
+<span id="cb17-11"><a href=""></a>    <span class="kw">def</span> search_docs(<span class="va">self</span>, query): ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="fragment">
-<p>The trace captures the <strong>full execution graph</strong> — every LLM call, every tool, every decision.</p>
+<p>The trace captures the <strong>full execution graph</strong> — ensuring you can audit every decision, model choice, and tool result.</p>
 <div class="cell" data-reveal="true" data-fig-width="8" data-layout-align="default">
 <div class="cell-output-display">
 <div>
@@ -942,36 +1084,28 @@ Step 6: "I need to search for more info..."</code></pre>
 </div>
 </div>
 </div>
-<pre><code>
-. . .
-
-::: {.callout-tip}
-## Integrated Workflow
-Because they follow the same pattern, you can switch between tools or even bridge them later to get "Production Tracing + Automated Scoring" without rewriting your agent.
-:::
-
-## Evaluation with Test Cases {.smaller}
-
-```{.python code-line-numbers="|1-4|6-12|14-17"}
-from deepeval import evaluate
-from deepeval.test_case import LLMTestCase, ToolCall
-from deepeval.metrics import TaskCompletionMetric, ToolCorrectnessMetric
-
-test_case = LLMTestCase(
-    input='What is the capital of France?', # The prompt/query being tested
-    actual_output='Paris is the capital of France.', # The actual output from your agent
-    expected_output='Paris', # The ideal "ground truth" answer
-    # Tools actually called by the agent
-    tools_called=[ToolCall(name='search', input_parameters={'query': 'capital of France'})],
-    # Tools the agent WAS EXPECTED to call
-    expected_tools=[ToolCall(name='search', input_parameters={'query': 'capital of France'})]
-)
-
-evaluate(
-    test_cases=[test_case],
-    metrics=[TaskCompletionMetric(), ToolCorrectnessMetric()]
-)</code></pre>
 </div>
+</section>
+<section id="evaluation-with-test-cases" class="slide level2 smaller">
+<h2>Evaluation with Test Cases</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb18" data-code-line-numbers="|1-4|6-12|14-17"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href=""></a><span class="im">from</span> deepeval <span class="im">import</span> evaluate</span>
+<span id="cb18-2"><a href=""></a><span class="im">from</span> deepeval.test_case <span class="im">import</span> LLMTestCase, ToolCall</span>
+<span id="cb18-3"><a href=""></a><span class="im">from</span> deepeval.metrics <span class="im">import</span> TaskCompletionMetric, ToolCorrectnessMetric</span>
+<span id="cb18-4"><a href=""></a></span>
+<span id="cb18-5"><a href=""></a>test_case <span class="op">=</span> LLMTestCase(</span>
+<span id="cb18-6"><a href=""></a>    <span class="bu">input</span><span class="op">=</span><span class="st">'What is the capital of France?'</span>, <span class="co"># The prompt/query being tested</span></span>
+<span id="cb18-7"><a href=""></a>    actual_output<span class="op">=</span><span class="st">'Paris is the capital of France.'</span>, <span class="co"># The actual output from your agent</span></span>
+<span id="cb18-8"><a href=""></a>    expected_output<span class="op">=</span><span class="st">'Paris'</span>, <span class="co"># The ideal "ground truth" answer</span></span>
+<span id="cb18-9"><a href=""></a>    <span class="co"># Tools actually called by the agent</span></span>
+<span id="cb18-10"><a href=""></a>    tools_called<span class="op">=</span>[ToolCall(name<span class="op">=</span><span class="st">'search'</span>, input_parameters<span class="op">=</span>{<span class="st">'query'</span>: <span class="st">'capital of France'</span>})],</span>
+<span id="cb18-11"><a href=""></a>    <span class="co"># Tools the agent WAS EXPECTED to call</span></span>
+<span id="cb18-12"><a href=""></a>    expected_tools<span class="op">=</span>[ToolCall(name<span class="op">=</span><span class="st">'search'</span>, input_parameters<span class="op">=</span>{<span class="st">'query'</span>: <span class="st">'capital of France'</span>})]</span>
+<span id="cb18-13"><a href=""></a>)</span>
+<span id="cb18-14"><a href=""></a></span>
+<span id="cb18-15"><a href=""></a>evaluate(</span>
+<span id="cb18-16"><a href=""></a>    test_cases<span class="op">=</span>[test_case],</span>
+<span id="cb18-17"><a href=""></a>    metrics<span class="op">=</span>[TaskCompletionMetric(), ToolCorrectnessMetric()]</span>
+<span id="cb18-18"><a href=""></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="fragment">
 <p><a href="https://deepeval.com/docs/evaluation-test-cases">Read more: DeepEval Test Cases Documentation</a></p>
 </div>
@@ -1012,19 +1146,19 @@ Average Step Efficiency: 0.79
 <h2>CI/CD Integration</h2>
 <div class="columns">
 <div class="column" style="width:55%;">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href=""></a><span class="co"># test_agent.py - runs in your CI pipeline</span></span>
-<span id="cb17-2"><a href=""></a><span class="im">import</span> pytest</span>
-<span id="cb17-3"><a href=""></a><span class="im">from</span> deepeval <span class="im">import</span> assert_test</span>
-<span id="cb17-4"><a href=""></a><span class="im">from</span> deepeval.metrics <span class="im">import</span> TaskCompletionMetric</span>
-<span id="cb17-5"><a href=""></a></span>
-<span id="cb17-6"><a href=""></a><span class="kw">def</span> test_agent_factual_queries():</span>
-<span id="cb17-7"><a href=""></a>    test_case <span class="op">=</span> LLMTestCase(</span>
-<span id="cb17-8"><a href=""></a>        <span class="bu">input</span><span class="op">=</span><span class="st">"What is the capital of France?"</span>,</span>
-<span id="cb17-9"><a href=""></a>        actual_output<span class="op">=</span>agent.run(<span class="st">"What is..."</span>),</span>
-<span id="cb17-10"><a href=""></a>        expected_output<span class="op">=</span><span class="st">"Paris"</span></span>
-<span id="cb17-11"><a href=""></a>    )</span>
-<span id="cb17-12"><a href=""></a>    assert_test(test_case,</span>
-<span id="cb17-13"><a href=""></a>                [TaskCompletionMetric(threshold<span class="op">=</span><span class="fl">0.8</span>)])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb20"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href=""></a><span class="co"># test_agent.py - runs in your CI pipeline</span></span>
+<span id="cb20-2"><a href=""></a><span class="im">import</span> pytest</span>
+<span id="cb20-3"><a href=""></a><span class="im">from</span> deepeval <span class="im">import</span> assert_test</span>
+<span id="cb20-4"><a href=""></a><span class="im">from</span> deepeval.metrics <span class="im">import</span> TaskCompletionMetric</span>
+<span id="cb20-5"><a href=""></a></span>
+<span id="cb20-6"><a href=""></a><span class="kw">def</span> test_agent_factual_queries():</span>
+<span id="cb20-7"><a href=""></a>    test_case <span class="op">=</span> LLMTestCase(</span>
+<span id="cb20-8"><a href=""></a>        <span class="bu">input</span><span class="op">=</span><span class="st">"What is the capital of France?"</span>,</span>
+<span id="cb20-9"><a href=""></a>        actual_output<span class="op">=</span>agent.run(<span class="st">"What is..."</span>),</span>
+<span id="cb20-10"><a href=""></a>        expected_output<span class="op">=</span><span class="st">"Paris"</span></span>
+<span id="cb20-11"><a href=""></a>    )</span>
+<span id="cb20-12"><a href=""></a>    assert_test(test_case,</span>
+<span id="cb20-13"><a href=""></a>                [TaskCompletionMetric(threshold<span class="op">=</span><span class="fl">0.8</span>)])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div><div class="column" style="width:45%;">
 <div class="callout callout-tip callout-titled callout-style-default">
 <div class="callout-body">
@@ -1090,13 +1224,13 @@ Average Step Efficiency: 0.79
 </div>
 </div>
 </div></div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb18"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href=""></a><span class="im">from</span> evaluation.embedding_metrics <span class="im">import</span> get_embedding_metrics</span>
-<span id="cb18-2"><a href=""></a></span>
-<span id="cb18-3"><a href=""></a>relevance, coverage, answer <span class="op">=</span> get_embedding_metrics(</span>
-<span id="cb18-4"><a href=""></a>    relevance_threshold<span class="op">=</span><span class="fl">0.25</span>, coverage_threshold<span class="op">=</span><span class="fl">0.4</span></span>
-<span id="cb18-5"><a href=""></a>)</span>
-<span id="cb18-6"><a href=""></a>result <span class="op">=</span> relevance.evaluate(query_embedding, retrieved_embeddings)</span>
-<span id="cb18-7"><a href=""></a><span class="co"># Offline — no API calls, instant feedback</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb21"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href=""></a><span class="im">from</span> evaluation.embedding_metrics <span class="im">import</span> get_embedding_metrics</span>
+<span id="cb21-2"><a href=""></a></span>
+<span id="cb21-3"><a href=""></a>relevance, coverage, answer <span class="op">=</span> get_embedding_metrics(</span>
+<span id="cb21-4"><a href=""></a>    relevance_threshold<span class="op">=</span><span class="fl">0.25</span>, coverage_threshold<span class="op">=</span><span class="fl">0.4</span></span>
+<span id="cb21-5"><a href=""></a>)</span>
+<span id="cb21-6"><a href=""></a>result <span class="op">=</span> relevance.evaluate(query_embedding, retrieved_embeddings)</span>
+<span id="cb21-7"><a href=""></a><span class="co"># Offline — no API calls, instant feedback</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="deepeval-vs-custom-evaluation" class="slide level2">
 <h2>DeepEval vs Custom Evaluation</h2>
@@ -1120,8 +1254,8 @@ Average Step Efficiency: 0.79
 </div></div>
 </section></section>
 <section>
-<section id="f.-wrap-up" class="title-slide slide level1 sdaia-dark center" data-background-gradient="linear-gradient(135deg, #1C355E, #00C9A7)">
-<h1>F. Wrap-up</h1>
+<section id="g.-wrap-up" class="title-slide slide level1 sdaia-dark center" data-background-gradient="linear-gradient(135deg, #1C355E, #00C9A7)">
+<h1>G. Wrap-up</h1>
 
 </section>
 <section id="key-takeaways" class="slide level2">

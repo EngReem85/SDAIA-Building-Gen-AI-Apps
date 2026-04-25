@@ -9,7 +9,7 @@
 <link href="03_vector_storage_retrieval_files/libs/quarto-html/quarto-syntax-highlighting-587c61ba64f3a5504c4d52d930310e48.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
   <meta name="generator" content="quarto-1.8.26">
 
-  <meta name="dcterms.date" content="2026-04-21">
+  <meta name="dcterms.date" content="2026-04-24">
   <title>Vector Storage &amp; Retrieval</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -204,7 +204,7 @@
 <div class="quarto-title-authors">
 </div>
 
-  <p class="date">2026-04-21</p>
+  <p class="date">2026-04-24</p>
 </section>
 <section>
 <section id="a.-vector-store-landscape" class="title-slide slide level1 sdaia-dark center" data-background-gradient="linear-gradient(135deg, #1C355E, #00C9A7)">
@@ -272,8 +272,8 @@
 <td>Cloud-native</td>
 <td style="text-align: center;">Billions</td>
 <td style="text-align: center;">Fully</td>
-<td>Large-scale production</td>
-<td style="text-align: center;">~$70/mo+</td>
+<td>Enterprise-ready RAG</td>
+<td style="text-align: center;">Usage-based*</td>
 </tr>
 <tr class="odd">
 <td><strong>Weaviate</strong></td>
@@ -293,7 +293,10 @@
 </tr>
 </tbody>
 </table>
-</section>
+
+<aside><div>
+<p>*Pinecone Serverless has no fixed monthly fee; pay only for storage and compute.</p>
+</div></aside></section>
 <section id="our-choice-chromadb" class="slide level2">
 <h2>Our Choice: ChromaDB</h2>
 <div class="callout callout-tip callout-titled callout-style-default">
@@ -398,7 +401,10 @@
 <section id="speed-vs-accuracy" class="slide level2">
 <h2>Speed vs Accuracy</h2>
 
-<img data-src="../assets/generated/plot_hnsw_tradeoff.png" class="r-stretch"></section>
+<img data-src="../assets/internet_images/recall_vs_latency_osc.png" class="r-stretch quarto-figure-center"><p class="caption">Varying <code>ef_search</code> or ‘k’ here</p><blockquote>
+<p>SOURCE: <a href="https://opensourceconnections.com/blog/2025/02/27/vector-search-navigating-recall-and-performance/">OpenSource Connections (2025)</a>, “Vector Search: Navigating Recall and Performance”. Standard Pareto frontier for HNSW.</p>
+</blockquote>
+</section>
 <section id="tuning-rules" class="slide level2">
 <h2>Tuning Rules</h2>
 <div class="callout callout-tip callout-titled callout-style-default">
@@ -421,7 +427,7 @@
 </div>
 <div class="fragment fade-in">
 <blockquote>
-<p><strong>Key insight:</strong> You can increase <code>ef_search</code> at query time without rebuilding the index. Start low, increase until latency is unacceptable.</p>
+<p><strong>Key insight:</strong> You can increase <code>ef_search</code> at query time without rebuilding the index. In ChromaDB, use <code>collection.modify(metadata={"hnsw:search_ef": 200})</code> to tune accuracy without downtime.</p>
 </blockquote>
 </div>
 </section></section>
@@ -791,6 +797,15 @@
 <li>No evaluation framework</li>
 </ul>
 </div></div>
+</section>
+<section id="references-evidence" class="slide level2" data-background-color="#f8f9fa">
+<h2>References &amp; Evidence</h2>
+<ol type="1">
+<li><strong>HNSW Algorithm</strong>: <a href="https://arxiv.org/abs/1603.09320">Malkov &amp; Yashunin (2018)</a> - <em>Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs.</em></li>
+<li><strong>Pinecone Pricing</strong>: <a href="https://www.pinecone.io/pricing/">Pinecone Serverless</a> - <em>Usage-based pricing model overview.</em></li>
+<li><strong>ChromaDB Configuration</strong>: <a href="https://docs.trychroma.com/usage-guide#changing-the-distance-function">Official ChromaDB Docs</a> - <em>Details on tuning HNSW parameters.</em></li>
+<li><strong>Vector DB Benchmarks</strong>: <a href="https://ann-benchmarks.com/">ANN-Benchmarks</a> - <em>Evidence for scale and latency claims for various algorithms.</em></li>
+</ol>
 </section>
 <section id="key-takeaways" class="slide level2 sdaia-dark" data-background-color="#1C355E">
 <h2>Key Takeaways</h2>

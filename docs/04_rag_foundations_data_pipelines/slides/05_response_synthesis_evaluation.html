@@ -9,7 +9,7 @@
 <link href="05_response_synthesis_evaluation_files/libs/quarto-html/quarto-syntax-highlighting-587c61ba64f3a5504c4d52d930310e48.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
   <meta name="generator" content="quarto-1.8.26">
 
-  <meta name="dcterms.date" content="2026-04-21">
+  <meta name="dcterms.date" content="2026-04-24">
   <title>From Context to Answer</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -204,7 +204,7 @@
 <div class="quarto-title-authors">
 </div>
 
-  <p class="date">2026-04-21</p>
+  <p class="date">2026-04-24</p>
 </section>
 <section>
 <section id="a.-citation-aware-prompting" class="title-slide slide level1 sdaia-dark center" data-background-gradient="linear-gradient(135deg, #1C355E, #00C9A7)">
@@ -282,7 +282,7 @@ If not in context, say so."</code></pre>
 <h2>Input / Output Example</h2>
 <p><strong>Input:</strong></p>
 <blockquote>
-<p><strong>Context:</strong> [1] Title: FlashAttention Paper — FlashAttention is an IO-aware exact attention algorithm that uses tiling to reduce memory reads/writes…</p>
+<p><strong>Context:</strong> [1] Title: <a href="https://arxiv.org/abs/2205.14135">FlashAttention Paper</a> — FlashAttention is an IO-aware exact attention algorithm that uses tiling to reduce memory reads/writes…</p>
 <p><strong>Question:</strong> What is FlashAttention?</p>
 </blockquote>
 <div class="fragment">
@@ -314,6 +314,7 @@ If not in context, say so."</code></pre>
 </section>
 <section id="token-counting" class="slide level2">
 <h2>Token Counting</h2>
+<p><a href="https://github.com/openai/tiktoken">tiktoken</a> — OpenAI’s fast BPE tokenizer.</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href=""></a><span class="im">import</span> tiktoken</span>
 <span id="cb5-2"><a href=""></a></span>
 <span id="cb5-3"><a href=""></a><span class="kw">def</span> fit_context_to_budget(results, max_tokens<span class="op">=</span><span class="dv">3000</span>,</span>
@@ -325,15 +326,16 @@ If not in context, say so."</code></pre>
 <span id="cb5-9"><a href=""></a></span>
 <span id="cb5-10"><a href=""></a>    <span class="cf">for</span> doc <span class="kw">in</span> results:</span>
 <span id="cb5-11"><a href=""></a>        text_tokens <span class="op">=</span> <span class="bu">len</span>(encoding.encode(doc[<span class="st">'text'</span>]))</span>
-<span id="cb5-12"><a href=""></a>        overhead <span class="op">=</span> <span class="dv">50</span>  <span class="co"># metadata formatting</span></span>
-<span id="cb5-13"><a href=""></a></span>
-<span id="cb5-14"><a href=""></a>        <span class="cf">if</span> current_tokens <span class="op">+</span> text_tokens <span class="op">+</span> overhead <span class="op">&gt;</span> max_tokens:</span>
-<span id="cb5-15"><a href=""></a>            <span class="cf">break</span></span>
-<span id="cb5-16"><a href=""></a></span>
-<span id="cb5-17"><a href=""></a>        selected.append(doc)</span>
-<span id="cb5-18"><a href=""></a>        current_tokens <span class="op">+=</span> text_tokens <span class="op">+</span> overhead</span>
-<span id="cb5-19"><a href=""></a></span>
-<span id="cb5-20"><a href=""></a>    <span class="cf">return</span> selected</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb5-12"><a href=""></a>        <span class="co"># Heuristic for metadata/formatting overhead</span></span>
+<span id="cb5-13"><a href=""></a>        overhead <span class="op">=</span> <span class="dv">20</span></span>
+<span id="cb5-14"><a href=""></a></span>
+<span id="cb5-15"><a href=""></a>        <span class="cf">if</span> current_tokens <span class="op">+</span> text_tokens <span class="op">+</span> overhead <span class="op">&gt;</span> max_tokens:</span>
+<span id="cb5-16"><a href=""></a>            <span class="cf">break</span></span>
+<span id="cb5-17"><a href=""></a></span>
+<span id="cb5-18"><a href=""></a>        selected.append(doc)</span>
+<span id="cb5-19"><a href=""></a>        current_tokens <span class="op">+=</span> text_tokens <span class="op">+</span> overhead</span>
+<span id="cb5-20"><a href=""></a></span>
+<span id="cb5-21"><a href=""></a>    <span class="cf">return</span> selected</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="upgraded-ragservice" class="slide level2">
 <h2>Upgraded RAGService</h2>
@@ -360,19 +362,21 @@ If not in context, say so."</code></pre>
 </section>
 <section id="streaming" class="slide level2">
 <h2>Streaming</h2>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href=""></a><span class="cf">async</span> <span class="kw">def</span> stream_answer(<span class="va">self</span>, query):</span>
-<span id="cb7-2"><a href=""></a>    <span class="co">"""Token-by-token streaming for better UX."""</span></span>
-<span id="cb7-3"><a href=""></a>    <span class="co"># ... setup prompt ...</span></span>
-<span id="cb7-4"><a href=""></a></span>
-<span id="cb7-5"><a href=""></a>    stream <span class="op">=</span> litellm.completion(</span>
-<span id="cb7-6"><a href=""></a>        model<span class="op">=</span><span class="va">self</span>.model,</span>
-<span id="cb7-7"><a href=""></a>        messages<span class="op">=</span>messages,</span>
-<span id="cb7-8"><a href=""></a>        stream<span class="op">=</span><span class="va">True</span>  <span class="co"># Key flag</span></span>
-<span id="cb7-9"><a href=""></a>    )</span>
-<span id="cb7-10"><a href=""></a></span>
-<span id="cb7-11"><a href=""></a>    <span class="cf">for</span> chunk <span class="kw">in</span> stream:</span>
-<span id="cb7-12"><a href=""></a>        <span class="cf">if</span> chunk.choices[<span class="dv">0</span>].delta.content:</span>
-<span id="cb7-13"><a href=""></a>            <span class="cf">yield</span> chunk.choices[<span class="dv">0</span>].delta.content</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href=""></a><span class="im">import</span> litellm</span>
+<span id="cb7-2"><a href=""></a></span>
+<span id="cb7-3"><a href=""></a><span class="cf">async</span> <span class="kw">def</span> stream_answer(<span class="va">self</span>, query):</span>
+<span id="cb7-4"><a href=""></a>    <span class="co">"""Token-by-token streaming for better UX."""</span></span>
+<span id="cb7-5"><a href=""></a>    <span class="co"># ... setup prompt ...</span></span>
+<span id="cb7-6"><a href=""></a></span>
+<span id="cb7-7"><a href=""></a>    stream <span class="op">=</span> litellm.completion(</span>
+<span id="cb7-8"><a href=""></a>        model<span class="op">=</span><span class="va">self</span>.model,</span>
+<span id="cb7-9"><a href=""></a>        messages<span class="op">=</span>messages,</span>
+<span id="cb7-10"><a href=""></a>        stream<span class="op">=</span><span class="va">True</span>  <span class="co"># Key flag</span></span>
+<span id="cb7-11"><a href=""></a>    )</span>
+<span id="cb7-12"><a href=""></a></span>
+<span id="cb7-13"><a href=""></a>    <span class="cf">for</span> chunk <span class="kw">in</span> stream:</span>
+<span id="cb7-14"><a href=""></a>        <span class="cf">if</span> chunk.choices[<span class="dv">0</span>].delta.content:</span>
+<span id="cb7-15"><a href=""></a>            <span class="cf">yield</span> chunk.choices[<span class="dv">0</span>].delta.content</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="callout callout-tip callout-titled callout-style-default">
 <div class="callout-body">
 <div class="callout-title">
@@ -444,7 +448,7 @@ If not in context, say so."</code></pre>
 <span id="cb9-6"><a href=""></a>            hits <span class="op">+=</span> <span class="dv">1</span></span>
 <span id="cb9-7"><a href=""></a>    <span class="cf">return</span> hits <span class="op">/</span> <span class="bu">len</span>(retrieved_ids)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <blockquote>
-<p><strong>Target:</strong> Hit Rate@5 &gt; 0.80 for production systems.</p>
+<p><strong>Industry Benchmark:</strong> Hit Rate@5 &gt; 0.80 is a common target for production-ready RAG systems, though requirements vary by domain.</p>
 </blockquote>
 </div>
 </section>
@@ -503,10 +507,6 @@ If not in context, say so."</code></pre>
 <p>Critical for: legal discovery, exhaustive search, research</p>
 </div></div>
 </section>
-<section id="precisionrecall-trade-off" class="slide level2">
-<h2>Precision/Recall Trade-off</h2>
-
-<img data-src="../assets/generated/plot_precision_recall_tradeoff.png" class="r-stretch"></section>
 <section id="which-metric-when" class="slide level2">
 <h2>Which Metric When?</h2>
 <table class="caption-top">
@@ -553,6 +553,7 @@ If not in context, say so."</code></pre>
 </section>
 <section id="corrective-rag-crag" class="slide level2">
 <h2>Corrective RAG (CRAG)</h2>
+<p><a href="https://arxiv.org/abs/2401.15884">Corrective Retrieval-Augmented Generation</a> (Yan et al., 2024).</p>
 <div class="cell" data-reveal="true" data-fig-width="10" data-layout-align="default">
 <div class="cell-output-display">
 <div>
@@ -620,6 +621,7 @@ If not in context, say so."</code></pre>
 </section>
 <section id="self-rag-adaptive-retrieval" class="slide level2">
 <h2>Self-RAG — Adaptive Retrieval</h2>
+<p><a href="https://arxiv.org/abs/2310.11511">Self-RAG: Learning to Retrieve, Generate, and Critique</a> (Asai et al., 2023).</p>
 <p>Standard RAG <strong>always</strong> retrieves regardless of need. Self-RAG lets the model decide.</p>
 <div class="fragment">
 <p>The model generates <strong>reflection tokens</strong> inline as it reasons:</p>
@@ -749,7 +751,7 @@ If not in context, say so."</code></pre>
               rate the answer's faithfulness 0-1.
               Does every claim come from the context?"</code></pre>
 <blockquote>
-<p>DeepEval, RAGAS, and other frameworks automate this pattern.</p>
+<p><a href="https://github.com/confident-ai/deepeval">DeepEval</a>, <a href="https://github.com/explodinggradients/ragas">RAGAS</a>, and other frameworks automate this pattern.</p>
 </blockquote>
 <p><em>Note: LLM judges can exhibit biases (position bias, verbosity preference). Use consistent prompts and validate judge scores against human spot-checks.</em></p>
 </div>
